@@ -34,14 +34,9 @@ export default function TimeInRangePage() {
     setDateRange({ startDate: start, endDate: end });
   }, []);
 
-  useEffect(() => {
-    if (dateRange.startDate && dateRange.endDate) {
-      fetchData({
-        startDate: dateRange.startDate.toISOString(),
-        endDate: dateRange.endDate.toISOString()
-      });
-    }
-  }, [dateRange.startDate, dateRange.endDate]);
+  const handleSearch = () => {
+    fetchData(dateRange);
+  };
 
   // Função para calcular a HbA1c estimada
   const calculateEstimatedA1c = (meanGlucose: number) => {
@@ -155,6 +150,8 @@ export default function TimeInRangePage() {
           startDate={dateRange.startDate}
           endDate={dateRange.endDate}
           onChange={setDateRange}
+          onSearch={handleSearch}
+          isLoading={loading}
         />
       </div>
 

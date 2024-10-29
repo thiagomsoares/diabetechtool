@@ -18,6 +18,7 @@ import Cookies from 'js-cookie';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Tempo no Alvo', href: '/time-in-range', icon: Target },
+  { name: 'Sensibilidade', href: '/sensitivity', icon: Activity },
   { name: 'Perfil', href: '/profile', icon: UserCircle },
   { name: 'Configurações', href: '/settings', icon: Settings },
 ];

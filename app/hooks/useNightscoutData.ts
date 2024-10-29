@@ -6,11 +6,13 @@ import { useApp } from '../contexts/AppContext';
 import { adjustTimestampToTimezone, getTimezoneOffset, convertUTCToUserTime, convertUserTimeToUTC, getUserTimezone } from '@/app/utils/timezone';
 import { toZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { format, addDays } from 'date-fns';
-
-interface NightscoutConfig {
-  startDate: string;
-  endDate: string;
-}
+import { 
+  NightscoutData, 
+  NightscoutConfig, 
+  LoadingStats,
+  DeviceStatus,
+  NightscoutProfile 
+} from '@/app/types/nightscout';
 
 interface HourlyData {
   hour: number;
@@ -36,9 +38,9 @@ interface ProcessedData {
   hourlyStats: HourlyData[];
 }
 
-interface LoadingStats {
-  current: number;
-  total: number;
+interface DateRange {
+  startDate: Date;
+  endDate: Date;
 }
 
 export const useNightscoutData = () => {
@@ -104,21 +106,46 @@ export const useNightscoutData = () => {
     })).sort((a, b) => a.hour - b.hour);
   };
 
-  const findActiveProfile = (profiles: any[], timestamp: string) => {
+  const findActiveProfile = (profiles: NightscoutProfile[], timestamp: string) => {
     // Ordenar perfis por data de criação (mais recente primeiro)
     const sortedProfiles = [...profiles].sort((a, b) => 
       new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
     );
 
-    // Encontrar o primeiro perfil que é anterior ou igual à data do timestamp
+    // Encontrar o perfil ativo para o timestamp
+    const targetDate = new Date(timestamp);
     const activeProfile = sortedProfiles.find(profile => 
-      new Date(profile.startDate) <= new Date(timestamp)
+      new Date(profile.startDate) <= targetDate
     );
 
-    return activeProfile || sortedProfiles[0]; // Retorna o perfil mais recente se nenhum for encontrado
+    return activeProfile || sortedProfiles[0];
   };
 
-  const processData = (devicestatus: any[], profiles: any[]) => {
+  const findProfileSensitivity = (profileStore: ProfileStore, timestamp: string) => {
+    const hour = new Date(timestamp).getHours();
+    const minutes = new Date(timestamp).getMinutes();
+    const timeInMinutes = hour * 60 + minutes;
+
+    // Converter horários do perfil para minutos para comparação
+    const sensSchedule = profileStore.sens
+      .map(s => ({
+        ...s,
+        minutesFromMidnight: parseInt(s.time.split(':')[0]) * 60 + parseInt(s.time.split(':')[1] || '0')
+      }))
+      .sort((a, b) => a.minutesFromMidnight - b.minutesFromMidnight);
+
+    // Encontrar o valor de sensibilidade apropriado
+    const activeSens = sensSchedule.reduce((prev, curr) => {
+      if (curr.minutesFromMidnight <= timeInMinutes) {
+        return curr;
+      }
+      return prev;
+    }, sensSchedule[sensSchedule.length - 1]);
+
+    return activeSens.value;
+  };
+
+  const processData = (devicestatus: DeviceStatus[], profiles: NightscoutProfile[]) => {
     console.log('Processando dados:', { devicestatus, profiles });
     const total = devicestatus.length;
     let current = 0;
@@ -138,65 +165,49 @@ export const useNightscoutData = () => {
 
     devicestatus.forEach(status => {
       current++;
-      if (current % 100 === 0) { // Atualizar a cada 100 registros
+      if (current % 100 === 0) {
         setLoadingStats({ current, total });
       }
 
       if (status.openaps?.suggested) {
         const suggested = status.openaps.suggested;
-        const timestamp = toZonedTime(new Date(status.created_at), timezone);
+        const timestamp = new Date(status.created_at).toISOString();
         const bg = suggested.bg;
 
         // Buscar o ISF dinâmico
         let isfDynamic = null;
-        
-        if (status.openaps?.suggested?.sens) {
-          isfDynamic = status.openaps.suggested.sens;
-        } else if (status.openaps?.suggested?.sensitivities) {
-          isfDynamic = status.openaps.suggested.sensitivities;
-        } else if (status.openaps?.suggested?.variable_sens) {
-          isfDynamic = status.openaps.suggested.variable_sens;
-        } else if (status.openaps?.suggested?.sensitivityRatio) {
-          isfDynamic = 70 / status.openaps.suggested.sensitivityRatio;
+        if (suggested.sens) {
+          isfDynamic = suggested.sens;
+        } else if (suggested.sensitivities) {
+          isfDynamic = suggested.sensitivities;
+        } else if (suggested.variable_sens) {
+          isfDynamic = suggested.variable_sens;
+        } else if (suggested.sensitivityRatio) {
+          isfDynamic = 70 / suggested.sensitivityRatio;
         }
 
-        // Encontrar o perfil ativo para este timestamp específico
-        const activeProfile = findActiveProfile(profiles, timestamp.toISOString());
+        // Encontrar o perfil ativo e seu ISF
+        const activeProfile = findActiveProfile(profiles, timestamp);
         let isfProfile = null;
 
         if (activeProfile?.store) {
-          const profileData = activeProfile.store[activeProfile.defaultProfile];
-          if (profileData?.sens) {
-            const hour = new Date(timestamp).getHours();
-            const sensSchedule = profileData.sens.find((s: any) => {
-              const scheduleHour = parseInt(s.time.split(':')[0]);
-              return hour >= scheduleHour;
-            });
-            if (sensSchedule) {
-              isfProfile = sensSchedule.value;
-            }
+          const profileStore = activeProfile.store[activeProfile.defaultProfile];
+          if (profileStore?.sens) {
+            isfProfile = findProfileSensitivity(profileStore, timestamp);
           }
         }
-
-        console.log('Dados processados:', {
-          timestamp,
-          bg,
-          isfDynamic,
-          isfProfile,
-          profileName: activeProfile?.defaultProfile
-        });
 
         if (bg && isfDynamic && isfProfile) {
           const deviation = ((isfDynamic - isfProfile) / isfProfile) * 100;
 
-          processedData.timestamps.push(timestamp.toISOString());
+          processedData.timestamps.push(timestamp);
           processedData.bgs.push(bg);
           processedData.isfDynamic.push(isfDynamic);
           processedData.isfProfile.push(isfProfile);
           processedData.deviations.push(deviation);
 
           processedData.tableData.push({
-            timestamp: timestamp.toISOString(),
+            timestamp,
             bg,
             isfDynamic,
             isfProfile,
@@ -205,6 +216,9 @@ export const useNightscoutData = () => {
         }
       }
     });
+
+    // Processar estatísticas por hora
+    processedData.hourlyStats = processHourlyData(processedData);
 
     setLoadingStats(null);
     return processedData;
@@ -245,20 +259,33 @@ export const useNightscoutData = () => {
     }
   };
 
-  const fetchData = async (config: NightscoutConfig) => {
+  const fetchData = async (dateRange: DateRange) => {
+    if (!dateRange.startDate || !dateRange.endDate) {
+      setError('Datas inválidas');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setLoadingStats(null);
 
     try {
-      const startDate = new Date(config.startDate);
+      const savedConfig = getConfig();
+      const { baseUrl, apiSecret } = savedConfig;
+      const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+
+      // Formatar datas para a API
+      const startDate = new Date(dateRange.startDate);
+      const endDate = new Date(dateRange.endDate);
+      
+      // Garantir que as datas são válidas
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        throw new Error('Datas inválidas');
+      }
+
       const formattedStartDate = format(startDate, 'yyyy-MM-dd');
-      
-      // Adicionar um dia à data final
-      const endDate = new Date(config.endDate);
-      const nextDay = addDays(endDate, 1);
-      const formattedEndDate = format(nextDay, 'yyyy-MM-dd');
-      
+      const formattedEndDate = format(addDays(endDate, 1), 'yyyy-MM-dd');
+
       console.log('Buscando dados:', {
         startDate: formattedStartDate,
         endDate: formattedEndDate
@@ -267,26 +294,12 @@ export const useNightscoutData = () => {
       // Calcular o número de pontos baseado no intervalo do sensor
       const diffMinutes = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60));
       const expectedDataPoints = Math.ceil(diffMinutes / settings.sensorInterval);
-      
-      console.log('Calculando pontos de dados:', {
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
-        diffMinutes,
-        sensorInterval: settings.sensorInterval,
-        expectedDataPoints
-      });
 
       setLoadingStats({ current: 0, total: expectedDataPoints });
-      
-      const savedConfig = getConfig();
-      const { baseUrl, apiSecret } = savedConfig;
-      const cleanBaseUrl = baseUrl.replace(/\/$/, '');
 
-      // Ajustar a URL para usar o formato de data correto
+      // Buscar entries
       const entriesUrl = `${cleanBaseUrl}/api/v1/entries?find[dateString][$gte]=${formattedStartDate}&find[dateString][$lte]=${formattedEndDate}&count=${expectedDataPoints}`;
       
-      console.log('URL da requisição:', entriesUrl);
-
       const entriesResponse = await fetch('/api/nightscout', {
         method: 'POST',
         headers: {
@@ -300,16 +313,10 @@ export const useNightscoutData = () => {
       }
 
       const entries = await entriesResponse.json();
-      console.log('Dados recebidos:', {
-        esperado: expectedDataPoints,
-        recebido: entries.length
-      });
 
-      // Processar os dados de glicose
-      const processedData = {
-        timestamps: entries.map((entry: any) => 
-          convertUTCToUserTime(new Date(entry.date)).toISOString()
-        ),
+      // Processar dados de glicose
+      const processedData: ProcessedData = {
+        timestamps: entries.map((entry: any) => new Date(entry.date).toISOString()),
         bgs: entries.map((entry: any) => entry.sgv || entry.glucose),
         isfDynamic: [],
         isfProfile: [],
@@ -324,7 +331,7 @@ export const useNightscoutData = () => {
         hourlyStats: []
       };
 
-      // Tentar buscar dados de sensibilidade se disponíveis
+      // Buscar devicestatus
       try {
         const devicestatusUrl = `${cleanBaseUrl}/api/v1/devicestatus?find[created_at][$gte]=${formattedStartDate}&find[created_at][$lte]=${formattedEndDate}&count=${expectedDataPoints}`;
         const devicestatusResponse = await fetch('/api/nightscout', {
@@ -337,25 +344,38 @@ export const useNightscoutData = () => {
 
         if (devicestatusResponse.ok) {
           const devicestatus = await devicestatusResponse.json();
-          // Processar dados de sensibilidade se disponíveis
-          // ... (manter o código de processamento existente)
+          const profileResponse = await fetch('/api/nightscout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              url: `${cleanBaseUrl}/api/v1/profile`,
+              apiSecret
+            }),
+          });
+
+          if (profileResponse.ok) {
+            const profiles = await profileResponse.json();
+            const processedWithSensitivity = processData(devicestatus, profiles);
+            setData({
+              ...processedData,
+              ...processedWithSensitivity
+            });
+          } else {
+            setData(processedData);
+          }
+        } else {
+          setData(processedData);
         }
       } catch (err) {
         console.log('Erro ao buscar dados de sensibilidade:', err);
-        // Não lançar erro, apenas continuar sem os dados de sensibilidade
+        setData(processedData);
       }
-
-      setData(processedData);
 
     } catch (err) {
       console.error('Erro detalhado:', err);
-      let errorMessage = 'Erro ao conectar com o Nightscout. ';
-      
-      if (err instanceof Error) {
-        errorMessage += err.message;
-      }
-      
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : 'Erro ao buscar dados');
     } finally {
       setLoading(false);
       setLoadingStats(null);

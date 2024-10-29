@@ -48,10 +48,7 @@ export const Dashboard = () => {
   useEffect(() => {
     if (isConfigured && dateRange.startDate && dateRange.endDate) {
       console.log('Buscando dados para o período:', dateRange);
-      fetchData({
-        startDate: dateRange.startDate.toISOString(),
-        endDate: dateRange.endDate.toISOString()
-      });
+      fetchData(dateRange);
     }
   }, [dateRange.startDate, dateRange.endDate, isConfigured]);
 
@@ -64,6 +61,11 @@ export const Dashboard = () => {
   const handleDateChange = (dates: { startDate: Date; endDate: Date }) => {
     console.log('Datas alteradas:', dates);
     setDateRange(dates);
+  };
+
+  const handleSearch = () => {
+    console.log('Buscando dados para o período:', dateRange);
+    fetchData(dateRange);
     setLoadingMessage('Buscando dados...');
   };
 
@@ -166,6 +168,8 @@ export const Dashboard = () => {
               startDate={dateRange.startDate}
               endDate={dateRange.endDate}
               onChange={handleDateChange}
+              onSearch={handleSearch}
+              isLoading={loading}
             />
           </div>
         </div>

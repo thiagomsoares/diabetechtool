@@ -1,4 +1,10 @@
 {
+  "app/(dashboard)/sensitivity/page.tsx -> react-plotly.js": {
+    "id": "app/(dashboard)/sensitivity/page.tsx -> react-plotly.js",
+    "files": [
+      "static/chunks/_app-pages-browser_node_modules_react-plotly_js_react-plotly_js.js"
+    ]
+  },
   "app/(dashboard)/time-in-range/page.tsx -> react-plotly.js": {
     "id": "app/(dashboard)/time-in-range/page.tsx -> react-plotly.js",
     "files": [

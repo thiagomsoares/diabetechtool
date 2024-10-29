@@ -1,5 +1,7 @@
 {
-  "/api/nightscout/route": "app/api/nightscout/route.js",
   "/page": "app/page.js",
-  "/(dashboard)/time-in-range/page": "app/(dashboard)/time-in-range/page.js"
+  "/api/nightscout/route": "app/api/nightscout/route.js",
+  "/(dashboard)/settings/page": "app/(dashboard)/settings/page.js",
+  "/(dashboard)/time-in-range/page": "app/(dashboard)/time-in-range/page.js",
+  "/(dashboard)/sensitivity/page": "app/(dashboard)/sensitivity/page.js"
 }

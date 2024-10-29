@@ -1,16 +1,25 @@
 'use client'
 
 import React from 'react';
-import { format, addDays } from 'date-fns';
+import { Datepicker, Button } from 'flowbite-react';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface DateRangePickerProps {
   startDate: Date;
   endDate: Date;
   onChange: (dates: { startDate: Date; endDate: Date }) => void;
+  onSearch: () => void;
+  isLoading?: boolean;
 }
 
-export const DateRangePicker = ({ startDate, endDate, onChange }: DateRangePickerProps) => {
+export const DateRangePicker = ({ 
+  startDate, 
+  endDate, 
+  onChange, 
+  onSearch,
+  isLoading = false 
+}: DateRangePickerProps) => {
   const presets = [
     { label: 'Hoje', days: 0 },
     { label: 'Últimos 3 dias', days: 3 },
@@ -25,7 +34,6 @@ export const DateRangePicker = ({ startDate, endDate, onChange }: DateRangePicke
     
     const start = new Date();
     if (days === 0) {
-      // Para "Hoje", começa à meia-noite do dia atual
       start.setHours(0, 0, 0, 0);
     } else {
       start.setDate(end.getDate() - days);
@@ -39,39 +47,76 @@ export const DateRangePicker = ({ startDate, endDate, onChange }: DateRangePicke
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {presets.map((preset) => (
-          <button
+          <Button
             key={preset.days}
             onClick={() => handleQuickSelect(preset.days)}
-            className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md 
-                     text-blue-700 bg-blue-50 hover:bg-blue-100 
-                     focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-                     transition-colors duration-200"
+            size="sm"
+            color="blue"
+            pill
           >
             {preset.label}
-          </button>
+          </Button>
         ))}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Data
-          </label>
-          <div className="relative">
-            <input
-              type="date"
-              value={format(startDate, 'yyyy-MM-dd')}
-              onChange={(e) => {
-                const newDate = new Date(e.target.value);
-                newDate.setHours(0, 0, 0, 0);
-                const endDate = new Date(newDate);
-                endDate.setDate(newDate.getDate() + 1);
-                endDate.setHours(23, 59, 59, 999);
-                onChange({ startDate: newDate, endDate });
-              }}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-            />
+          <div className="mb-1 block">
+            <label htmlFor="startDate" className="text-sm font-medium text-gray-900 dark:text-white">
+              Data Inicial
+            </label>
           </div>
+          <Datepicker
+            id="startDate"
+            title="Data Inicial"
+            defaultDate={startDate}
+            onSelectedDateChanged={(date: Date) => {
+              const newDate = new Date(date);
+              newDate.setHours(0, 0, 0, 0);
+              onChange({ startDate: newDate, endDate });
+            }}
+            maxDate={endDate}
+            locale={ptBR}
+            weekStart={0}
+            labelTodayButton="Hoje"
+            labelClearButton="Limpar"
+            className="w-full"
+          />
+        </div>
+
+        <div className="flex-1">
+          <div className="mb-1 block">
+            <label htmlFor="endDate" className="text-sm font-medium text-gray-900 dark:text-white">
+              Data Final
+            </label>
+          </div>
+          <Datepicker
+            id="endDate"
+            title="Data Final"
+            defaultDate={endDate}
+            onSelectedDateChanged={(date: Date) => {
+              const newDate = new Date(date);
+              newDate.setHours(23, 59, 59, 999);
+              onChange({ startDate, endDate: newDate });
+            }}
+            minDate={startDate}
+            locale={ptBR}
+            weekStart={0}
+            labelTodayButton="Hoje"
+            labelClearButton="Limpar"
+            className="w-full"
+          />
+        </div>
+
+        <div className="flex items-end">
+          <Button
+            onClick={onSearch}
+            isProcessing={isLoading}
+            disabled={isLoading}
+            color="blue"
+          >
+            {isLoading ? 'Buscando...' : 'Buscar Informações'}
+          </Button>
         </div>
       </div>
     </div>

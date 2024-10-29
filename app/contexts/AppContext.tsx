@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
+import { LoadingStats } from '@/app/types/nightscout';
 
 interface AppSettings {
   darkMode: boolean;
@@ -19,6 +20,7 @@ interface AppContextType {
   settings: AppSettings;
   updateSettings: (newSettings: Partial<AppSettings>) => void;
   calculateDataPoints: (startDate: Date, endDate: Date) => number;
+  loadingStats?: LoadingStats;
 }
 
 const defaultSettings: AppSettings = {

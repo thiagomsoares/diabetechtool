@@ -6,15 +6,10 @@ import { ptBR } from 'date-fns/locale';
 import { ChevronDownIcon, ChevronUpIcon, ArrowUpDownIcon } from 'lucide-react';
 import { formatTimestampWithTimezone } from '@/app/utils/timezone';
 import { useApp } from '@/app/contexts/AppContext';
+import { NightscoutData } from '@/app/types/nightscout';
 
 interface DataTableProps {
-  data: {
-    timestamp: string;
-    bg: number;
-    isfDynamic: number;
-    isfProfile: number;
-    deviation: number;
-  }[];
+  data: NightscoutData['tableData'];
 }
 
 export const DataTable = ({ data }: DataTableProps) => {

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { NightscoutConfig } from '@/app/types/nightscout';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json() as { url: string; apiSecret: string };
     let { url, apiSecret } = body;
 
     // Limpar a URL removendo barras extras

@@ -2,9 +2,10 @@
 
 import React, { useState, ChangeEvent } from 'react';
 import Cookies from 'js-cookie';
+import { NightscoutConfig } from '@/app/types/nightscout';
 
 interface ConfigFormProps {
-  onSubmit: (config: { baseUrl: string; apiSecret: string }) => void;
+  onSubmit: (config: NightscoutConfig) => void;
 }
 
 export const ConfigForm = ({ onSubmit }: ConfigFormProps) => {
