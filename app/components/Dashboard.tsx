@@ -203,7 +203,6 @@ export const Dashboard = () => {
       {data && !loading && (
         <Transition>
           {data.isfDynamic.length > 0 ? (
-            // Renderização normal com dados de sensibilidade
             <div className="space-y-6">
               <div className="bg-white rounded-lg shadow p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
@@ -239,38 +238,37 @@ export const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <div className="rounded-lg bg-white shadow">
-                  <div className="p-6">
-                    <h3 className="text-base font-semibold leading-6 text-gray-900">Glicemia vs Tempo</h3>
-                    <LineChart
-                      data={{
-                        timestamps: data.timestamps || [],
-                        values1: data.bgs || [],
-                        values2: [],
-                        title: '',
-                        yaxis: 'Glicemia (mg/dL)',
-                        series1Name: 'Glicemia',
-                        series2Name: ''
-                      }}
-                    />
-                  </div>
+              <div className="rounded-lg bg-white shadow">
+                <div className="p-6">
+                  <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">Glicemia vs Tempo</h3>
+                  <LineChart
+                    data={{
+                      timestamps: data.timestamps || [],
+                      values1: data.bgs || [],
+                      values2: [],
+                      title: '',
+                      yaxis: 'Glicemia (mg/dL)',
+                      series1Name: 'Glicemia',
+                      series2Name: ''
+                    }}
+                  />
                 </div>
-                <div className="rounded-lg bg-white shadow">
-                  <div className="p-6">
-                    <h3 className="text-base font-semibold leading-6 text-gray-900">ISF Dinâmico vs Perfil</h3>
-                    <LineChart
-                      data={{
-                        timestamps: data.timestamps || [],
-                        values1: data.isfDynamic || [],
-                        values2: data.isfProfile || [],
-                        title: '',
-                        yaxis: 'ISF',
-                        series1Name: 'ISF Dinâmico',
-                        series2Name: 'ISF Perfil'
-                      }}
-                    />
-                  </div>
+              </div>
+
+              <div className="rounded-lg bg-white shadow">
+                <div className="p-6">
+                  <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">ISF Dinâmico vs Perfil</h3>
+                  <LineChart
+                    data={{
+                      timestamps: data.timestamps || [],
+                      values1: data.isfDynamic || [],
+                      values2: data.isfProfile || [],
+                      title: '',
+                      yaxis: 'ISF',
+                      series1Name: 'ISF Dinâmico',
+                      series2Name: 'ISF Perfil'
+                    }}
+                  />
                 </div>
               </div>
 
@@ -282,7 +280,6 @@ export const Dashboard = () => {
               </div>
             </div>
           ) : (
-            // Renderização alternativa apenas com dados de glicose
             renderAlternativeView()
           )}
         </Transition>
