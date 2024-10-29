@@ -1,0 +1,20 @@
+{
+  "app/(dashboard)/time-in-range/page.tsx -> react-plotly.js": {
+    "id": "app/(dashboard)/time-in-range/page.tsx -> react-plotly.js",
+    "files": [
+      "static/chunks/_app-pages-browser_node_modules_react-plotly_js_react-plotly_js.js"
+    ]
+  },
+  "app/components/charts/HourlyDistributionChart.tsx -> react-plotly.js": {
+    "id": "app/components/charts/HourlyDistributionChart.tsx -> react-plotly.js",
+    "files": [
+      "static/chunks/_app-pages-browser_node_modules_react-plotly_js_react-plotly_js.js"
+    ]
+  },
+  "app/components/charts/LineChart.tsx -> react-plotly.js": {
+    "id": "app/components/charts/LineChart.tsx -> react-plotly.js",
+    "files": [
+      "static/chunks/_app-pages-browser_node_modules_react-plotly_js_react-plotly_js.js"
+    ]
+  }
+}
