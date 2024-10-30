@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
-import { LoadingStats } from '@/app/types/nightscout';
+import { LoadingStats, NightscoutData } from '@/app/types/nightscout';
 
 interface AppSettings {
   darkMode: boolean;
@@ -21,6 +21,8 @@ interface AppContextType {
   updateSettings: (newSettings: Partial<AppSettings>) => void;
   calculateDataPoints: (startDate: Date, endDate: Date) => number;
   loadingStats?: LoadingStats;
+  data: NightscoutData | null;
+  setData: (data: NightscoutData | null) => void;
 }
 
 const defaultSettings: AppSettings = {
@@ -39,6 +41,7 @@ export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
+  const [data, setData] = useState<NightscoutData | null>(null);
 
   useEffect(() => {
     const savedSettings = localStorage.getItem('app_settings');
@@ -73,7 +76,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AppContext.Provider value={{ settings, updateSettings, calculateDataPoints }}>
+    <AppContext.Provider value={{ 
+      settings, 
+      updateSettings, 
+      calculateDataPoints,
+      data,
+      setData 
+    }}>
       {children}
     </AppContext.Provider>
   );

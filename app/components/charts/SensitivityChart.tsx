@@ -98,13 +98,13 @@ export function SensitivityChart() {
           <div>
             <p className="text-sm text-gray-600">Média Sensibilidade Dinâmica</p>
             <p className="text-lg font-medium">
-              {(data.isfDynamic.reduce((a, b) => a + b, 0) / data.isfDynamic.length).toFixed(1)} mg/dL/U
+              {(data.isfDynamic.reduce((a: number, b: number) => a + b, 0) / data.isfDynamic.length).toFixed(1)} mg/dL/U
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Média Sensibilidade Perfil</p>
             <p className="text-lg font-medium">
-              {(data.isfProfile.reduce((a, b) => a + b, 0) / data.isfProfile.length).toFixed(1)} mg/dL/U
+              {(data.isfProfile.reduce((a: number, b: number) => a + b, 0) / data.isfProfile.length).toFixed(1)} mg/dL/U
             </p>
           </div>
         </div>
