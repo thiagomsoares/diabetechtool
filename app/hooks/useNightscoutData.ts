@@ -11,7 +11,8 @@ import {
   NightscoutConfig, 
   LoadingStats,
   DeviceStatus,
-  NightscoutProfile 
+  NightscoutProfile,
+  ProfileStore
 } from '@/app/types/nightscout';
 
 interface HourlyData {
