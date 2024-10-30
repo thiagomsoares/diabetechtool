@@ -3,10 +3,16 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   async rewrites() {
+    const nightscoutUrl = process.env.NEXT_PUBLIC_NIGHTSCOUT_API_URL;
+    // Garantir que a URL começa com http:// ou https://
+    const baseUrl = nightscoutUrl?.startsWith('http') 
+      ? nightscoutUrl 
+      : `https://${nightscoutUrl}`;
+
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_NIGHTSCOUT_API_URL + '/api/:path*',
+        destination: `${baseUrl}/api/:path*`,
       },
     ];
   },
