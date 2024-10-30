@@ -99,6 +99,11 @@ export default function SensitivityPage() {
     fetchData({ startDate: start, endDate: end });
   };
 
+  const handleDateRangeChange = (dates: { startDate: Date; endDate: Date }) => {
+    setDateRange(dates);
+    fetchData(dates);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -107,7 +112,9 @@ export default function SensitivityPage() {
         <DateRangePicker
           startDate={dateRange.startDate}
           endDate={dateRange.endDate}
-          onChange={setDateRange}
+          onChange={handleDateRangeChange}
+          onSearch={() => fetchData(dateRange)}
+          isLoading={loading}
         />
       </div>
 
