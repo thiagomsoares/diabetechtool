@@ -13,6 +13,7 @@ import { Feedback } from './Feedback';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ProgressBar } from './ProgressBar';
 import { GlucoseStats } from './GlucoseStats';
+import { QuickDateButtons } from './QuickDateButtons';
 
 export const Dashboard = () => {
   const router = useRouter();
@@ -155,6 +156,20 @@ export const Dashboard = () => {
     return Math.round(Math.sqrt(avgSquareDiff));
   };
 
+  const handlePeriodSelect = (days: number) => {
+    const end = new Date();
+    const start = new Date();
+    if (days === 0) {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      start.setDate(end.getDate() - days);
+      start.setHours(0, 0, 0, 0);
+    }
+    setDateRange({ startDate: start, endDate: end });
+    fetchData({ startDate: start, endDate: end });
+  };
+
   return (
     <div className="space-y-6">
       <Transition>
@@ -164,6 +179,7 @@ export const Dashboard = () => {
             {nightscoutUrl && `Conectado a: ${nightscoutUrl}`}
           </p>
           <div className="mt-4">
+            <QuickDateButtons onSelect={handlePeriodSelect} />
             <DateRangePicker
               startDate={dateRange.startDate}
               endDate={dateRange.endDate}

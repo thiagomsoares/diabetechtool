@@ -21,6 +21,7 @@ interface LineChartProps {
 }
 
 type PlotMode = 'lines' | 'markers' | 'text' | 'lines+markers' | 'text+markers' | 'text+lines' | 'text+lines+markers' | 'none';
+type Dash = 'solid' | 'dot' | 'dash' | 'longdash' | 'dashdot' | 'longdashdot';
 
 export const LineChart = ({ data }: LineChartProps) => {
   // Organizar dados por dia
@@ -92,44 +93,48 @@ export const LineChart = ({ data }: LineChartProps) => {
 
   const getPlotData = (): Partial<Data>[] => {
     // Dados do ISF dinâmico por dia
-    const dynamicLines = days.map((day, index) => {
-      const dayData = dayGroups[day].map(i => ({
-        timestamp: data.timestamps[i],
-        value: data.values1[i]
+    const dynamicLines = days.map((day, index) => ({
+      x: dayGroups[day].map(i => {
+        const date = new Date(data.timestamps[i]);
+        return date.getHours() * 60 + date.getMinutes();
+      }),
+      y: dayGroups[day].map(i => data.values1[i]),
+      type: 'scatter' as const,
+      mode: 'lines+markers' as PlotMode,
+      name: `${data.series1Name} - ${format(new Date(day), 'dd/MM')}`,
+      line: { color: colors[index % colors.length], width: 1.5 },
+      marker: { size: 3 },
+      hovertemplate: '%{y:.1f}<extra>%{fullData.name}</extra>'
+    }));
+
+    // Organizar dados do perfil por minuto do dia
+    const getProfileData = () => {
+      const profileData = data.timestamps.map((timestamp, index) => ({
+        minute: new Date(timestamp).getHours() * 60 + new Date(timestamp).getMinutes(),
+        value: data.values2[index]
       }));
 
-      // Converter timestamps para minutos do dia
-      const normalizedData = dayData.map(d => {
-        const date = new Date(d.timestamp);
-        return {
-          x: date.getHours() * 60 + date.getMinutes(),
-          y: d.value
-        };
-      });
-
-      // Ordenar por minutos para garantir a linha contínua
-      normalizedData.sort((a, b) => a.x - b.x);
+      profileData.sort((a, b) => a.minute - b.minute);
 
       return {
-        x: normalizedData.map(d => d.x),
-        y: normalizedData.map(d => d.y),
-        type: 'scatter',
-        mode: 'lines+markers' as PlotMode,
-        name: `${data.series1Name} - ${format(new Date(day), 'dd/MM')}`,
-        line: { color: colors[index % colors.length], width: 1.5 },
-        marker: { size: 3 },
-        hovertemplate: '%{y:.1f}<extra>%{fullData.name}</extra>'
+        x: profileData.map(d => d.minute),
+        y: profileData.map(d => d.value)
       };
-    });
+    };
 
     // Linha do ISF do perfil (referência)
+    const profileData = getProfileData();
     const profileLine = {
-      x: tickVals,
-      y: Array(tickVals.length).fill(data.values2[0]), // Assumindo que o ISF do perfil é constante
-      type: 'scatter',
+      x: profileData.x,
+      y: profileData.y,
+      type: 'scatter' as const,
       mode: 'lines' as PlotMode,
       name: data.series2Name,
-      line: { color: '#dc2626', width: 2, dash: 'dot' },
+      line: { 
+        color: '#dc2626', 
+        width: 2, 
+        dash: 'dot' as Dash 
+      },
       hovertemplate: '%{y:.1f}<extra>%{fullData.name}</extra>'
     };
 

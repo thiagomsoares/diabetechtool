@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Datepicker, Button } from 'flowbite-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -20,104 +20,82 @@ export const DateRangePicker = ({
   onSearch,
   isLoading = false 
 }: DateRangePickerProps) => {
-  const presets = [
-    { label: 'Hoje', days: 0 },
-    { label: 'Últimos 3 dias', days: 3 },
-    { label: 'Últimos 7 dias', days: 7 },
-    { label: 'Últimos 14 dias', days: 14 },
-    { label: 'Últimos 30 dias', days: 30 }
-  ];
+  // Estados locais para controlar as datas dos pickers
+  const [localStartDate, setLocalStartDate] = useState(startDate);
+  const [localEndDate, setLocalEndDate] = useState(endDate);
+  const [key, setKey] = useState(0); // Chave para forçar re-render do Datepicker
 
-  const handleQuickSelect = (days: number) => {
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
-    
-    const start = new Date();
-    if (days === 0) {
-      start.setHours(0, 0, 0, 0);
-    } else {
-      start.setDate(end.getDate() - days);
-      start.setHours(0, 0, 0, 0);
-    }
-    
-    onChange({ startDate: start, endDate: end });
-  };
+  // Atualiza os estados locais quando as props mudam
+  useEffect(() => {
+    setLocalStartDate(startDate);
+    setLocalEndDate(endDate);
+    // Força o re-render dos Datepickers
+    setKey(prev => prev + 1);
+  }, [startDate, endDate]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {presets.map((preset) => (
-          <Button
-            key={preset.days}
-            onClick={() => handleQuickSelect(preset.days)}
-            size="sm"
-            color="blue"
-            pill
-          >
-            {preset.label}
-          </Button>
-        ))}
+    <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex-1">
+        <div className="mb-1 block">
+          <label htmlFor="startDate" className="text-sm font-medium text-gray-900 dark:text-white">
+            Data Inicial
+          </label>
+        </div>
+        <Datepicker
+          key={`start-${key}`} // Chave única para forçar re-render
+          id="startDate"
+          title="Data Inicial"
+          defaultDate={localStartDate}
+          onSelectedDateChanged={(date: Date) => {
+            const newDate = new Date(date);
+            newDate.setHours(0, 0, 0, 0);
+            setLocalStartDate(newDate);
+            onChange({ startDate: newDate, endDate: localEndDate });
+            onSearch();
+          }}
+          maxDate={localEndDate}
+          weekStart={0}
+          labelTodayButton="Hoje"
+          labelClearButton="Limpar"
+          className="w-full"
+        />
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <div className="mb-1 block">
-            <label htmlFor="startDate" className="text-sm font-medium text-gray-900 dark:text-white">
-              Data Inicial
-            </label>
-          </div>
-          <Datepicker
-            id="startDate"
-            title="Data Inicial"
-            defaultDate={startDate}
-            onSelectedDateChanged={(date: Date) => {
-              const newDate = new Date(date);
-              newDate.setHours(0, 0, 0, 0);
-              onChange({ startDate: newDate, endDate });
-            }}
-            maxDate={endDate}
-            locale={ptBR}
-            weekStart={0}
-            labelTodayButton="Hoje"
-            labelClearButton="Limpar"
-            className="w-full"
-          />
+      <div className="flex-1">
+        <div className="mb-1 block">
+          <label htmlFor="endDate" className="text-sm font-medium text-gray-900 dark:text-white">
+            Data Final
+          </label>
         </div>
+        <Datepicker
+          key={`end-${key}`} // Chave única para forçar re-render
+          id="endDate"
+          title="Data Final"
+          defaultDate={localEndDate}
+          onSelectedDateChanged={(date: Date) => {
+            const newDate = new Date(date);
+            newDate.setHours(23, 59, 59, 999);
+            setLocalEndDate(newDate);
+            onChange({ startDate: localStartDate, endDate: newDate });
+            onSearch();
+          }}
+          minDate={localStartDate}
+          weekStart={0}
+          labelTodayButton="Hoje"
+          labelClearButton="Limpar"
+          className="w-full"
+        />
+      </div>
 
-        <div className="flex-1">
-          <div className="mb-1 block">
-            <label htmlFor="endDate" className="text-sm font-medium text-gray-900 dark:text-white">
-              Data Final
-            </label>
-          </div>
-          <Datepicker
-            id="endDate"
-            title="Data Final"
-            defaultDate={endDate}
-            onSelectedDateChanged={(date: Date) => {
-              const newDate = new Date(date);
-              newDate.setHours(23, 59, 59, 999);
-              onChange({ startDate, endDate: newDate });
-            }}
-            minDate={startDate}
-            locale={ptBR}
-            weekStart={0}
-            labelTodayButton="Hoje"
-            labelClearButton="Limpar"
-            className="w-full"
-          />
-        </div>
-
-        <div className="flex items-end">
-          <Button
-            onClick={onSearch}
-            isProcessing={isLoading}
-            disabled={isLoading}
-            color="blue"
-          >
-            {isLoading ? 'Buscando...' : 'Buscar Informações'}
-          </Button>
-        </div>
+      <div className="flex items-end">
+        <Button
+          onClick={onSearch}
+          isProcessing={isLoading}
+          disabled={isLoading}
+          color="blue"
+        >
+          {isLoading ? 'Buscando...' : 'Buscar Informações'}
+        </Button>
       </div>
     </div>
   );

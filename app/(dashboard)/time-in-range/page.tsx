@@ -8,13 +8,8 @@ import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { Feedback } from '@/app/components/Feedback';
 import { Transition } from '@/app/components/Transition';
 import { HourlyDistributionChart } from '@/app/components/charts/HourlyDistributionChart';
-import dynamic from 'next/dynamic';
-import { Layout, Config, Data } from 'plotly.js';
-import { useApp } from '@/app/contexts/AppContext';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
-
-const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 export default function TimeInRangePage() {
   const [dateRange, setDateRange] = useState({
@@ -23,19 +18,59 @@ export default function TimeInRangePage() {
   });
 
   const { data, loading, error, fetchData } = useNightscoutData();
-  const { settings } = useApp();
-
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
+  // Função para atualizar todas as datas de uma vez
+  const updateAllDates = (start: Date, end: Date) => {
+    const newDateRange = { startDate: start, endDate: end };
+    setDateRange(newDateRange);
+    setSelectedDate(end); // Atualiza a data selecionada para o último dia
+    fetchData(newDateRange); // Busca os dados automaticamente
+  };
+
+  // Handler para os botões de período
+  const handlePeriodSelect = (days: number) => {
+    const end = new Date();
+    const start = new Date();
+    if (days === 0) {
+      // Para "Hoje", define início e fim como hoje
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      // Para outros períodos, subtrai os dias da data atual
+      start.setDate(end.getDate() - days);
+    }
+    updateAllDates(start, end);
+  };
+
+  // Handler para o DateRangePicker
+  const handleDateRangeChange = (dates: { startDate: Date; endDate: Date }) => {
+    updateAllDates(dates.startDate, dates.endDate);
+  };
+
   useEffect(() => {
+    // Inicialização com as últimas 24 horas
     const end = new Date();
     const start = new Date();
     start.setHours(end.getHours() - 24);
-    setDateRange({ startDate: start, endDate: end });
+    updateAllDates(start, end);
   }, []);
 
-  const handleSearch = () => {
-    fetchData(dateRange);
+  // Funções de navegação do calendário diário
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    if (newDate >= dateRange.startDate) {
+      setSelectedDate(newDate);
+    }
+  };
+
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    if (newDate <= dateRange.endDate) {
+      setSelectedDate(newDate);
+    }
   };
 
   // Função para calcular a HbA1c estimada
@@ -125,32 +160,50 @@ export default function TimeInRangePage() {
     });
   };
 
-  // Funções de navegação
-  const goToPreviousDay = () => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() - 1);
-    if (newDate >= new Date(dateRange.startDate)) {
-      setSelectedDate(newDate);
-    }
-  };
-
-  const goToNextDay = () => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + 1);
-    if (newDate <= new Date(dateRange.endDate)) {
-      setSelectedDate(newDate);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-4">Tempo no Alvo</h2>
+        
+        {/* Botões de período - apenas um conjunto */}
+        <div className="flex gap-2 mb-4 flex-wrap">
+          <button
+            onClick={() => handlePeriodSelect(0)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Hoje
+          </button>
+          <button
+            onClick={() => handlePeriodSelect(3)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Últimos 3 dias
+          </button>
+          <button
+            onClick={() => handlePeriodSelect(7)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Últimos 7 dias
+          </button>
+          <button
+            onClick={() => handlePeriodSelect(14)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Últimos 14 dias
+          </button>
+          <button
+            onClick={() => handlePeriodSelect(30)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Últimos 30 dias
+          </button>
+        </div>
+
         <DateRangePicker
           startDate={dateRange.startDate}
           endDate={dateRange.endDate}
-          onChange={setDateRange}
-          onSearch={handleSearch}
+          onChange={handleDateRangeChange}
+          onSearch={() => fetchData(dateRange)}
           isLoading={loading}
         />
       </div>

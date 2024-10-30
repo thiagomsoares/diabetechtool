@@ -1,11 +1,12 @@
-const { createProxyMiddleware } = require('http-proxy-middleware');
-
-module.exports = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  swcMinify: true,
   async rewrites() {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://beniciosoares.nightscout.com.br/api/:path*', // Proxy para o Nightscout
+        destination: process.env.NEXT_PUBLIC_NIGHTSCOUT_API_URL + '/api/:path*',
       },
     ];
   },
@@ -22,4 +23,6 @@ module.exports = {
       },
     ];
   },
-}; 
+};
+
+module.exports = nextConfig; 

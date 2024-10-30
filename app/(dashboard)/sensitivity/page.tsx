@@ -8,6 +8,7 @@ import { Feedback } from '@/app/components/Feedback';
 import { Transition } from '@/app/components/Transition';
 import dynamic from 'next/dynamic';
 import { Layout, Config, Data } from 'plotly.js';
+import { QuickDateButtons } from '@/app/components/QuickDateButtons';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -87,10 +88,25 @@ export default function SensitivityPage() {
 
   const stats = calculateStats();
 
+  const handlePeriodSelect = (days: number) => {
+    const end = new Date();
+    const start = new Date();
+    if (days === 0) {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      start.setDate(end.getDate() - days);
+      start.setHours(0, 0, 0, 0);
+    }
+    setDateRange({ startDate: start, endDate: end });
+    fetchData({ startDate: start, endDate: end });
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-4">Análise de Sensibilidade</h2>
+        <QuickDateButtons onSelect={handlePeriodSelect} />
         <DateRangePicker
           startDate={dateRange.startDate}
           endDate={dateRange.endDate}
