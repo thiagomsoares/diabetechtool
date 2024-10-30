@@ -57,9 +57,9 @@ export default function SensitivityPage() {
   const renderISFDistributionChart = () => {
     if (!data?.isfDynamic) return null;
 
-    const trace = {
+    const trace: Partial<Data> = {
       x: data.isfDynamic,
-      type: 'histogram',
+      type: 'histogram' as const,
       name: 'ISF Dinâmico',
       marker: {
         color: '#2563eb'
