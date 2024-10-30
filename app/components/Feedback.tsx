@@ -6,11 +6,12 @@ import { CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 
 interface FeedbackProps {
   type: 'success' | 'error' | 'warning';
+  title?: string;
   message: string;
   onDismiss?: () => void;
 }
 
-export const Feedback = ({ type, message, onDismiss }: FeedbackProps) => {
+export const Feedback = ({ type, title, message, onDismiss }: FeedbackProps) => {
   const icons = {
     success: CheckCircle,
     error: XCircle,
@@ -37,7 +38,8 @@ export const Feedback = ({ type, message, onDismiss }: FeedbackProps) => {
           <Icon className="h-5 w-5" />
         </div>
         <div className="ml-3">
-          <p className="text-sm font-medium">{message}</p>
+          {title && <p className="text-sm font-medium mb-1">{title}</p>}
+          <p className="text-sm">{message}</p>
         </div>
         {onDismiss && (
           <div className="ml-auto pl-3">
