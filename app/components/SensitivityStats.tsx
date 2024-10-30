@@ -1,35 +1,37 @@
-import { useContext } from 'react'
-import { AppContext } from '../contexts/AppContext'
-import { LoadingSpinner } from './LoadingSpinner'
+'use client'
+
+import React from 'react';
+import { useApp } from '../contexts/AppContext';
+import { LoadingSpinner } from './LoadingSpinner';
 
 export function SensitivityStats() {
-  const { data, loading } = useContext(AppContext)
+  const { data, loading } = useApp();
 
   if (loading) {
-    return <LoadingSpinner />
+    return <LoadingSpinner />;
   }
 
   if (!data?.isfDynamic?.length || !data?.isfProfile?.length) {
-    return null
+    return null;
   }
 
   const calculateStats = () => {
     const deviations = data.isfDynamic.map((dynamic, i) => 
       Math.abs(dynamic - data.isfProfile[i])
-    )
+    );
 
-    const avgDeviation = deviations.reduce((a, b) => a + b, 0) / deviations.length
-    const maxDeviation = Math.max(...deviations)
-    const minDeviation = Math.min(...deviations)
+    const avgDeviation = deviations.reduce((a, b) => a + b, 0) / deviations.length;
+    const maxDeviation = Math.max(...deviations);
+    const minDeviation = Math.min(...deviations);
 
     return {
       avgDeviation: avgDeviation.toFixed(1),
       maxDeviation: maxDeviation.toFixed(1),
       minDeviation: minDeviation.toFixed(1)
-    }
-  }
+    };
+  };
 
-  const stats = calculateStats()
+  const stats = calculateStats();
 
   return (
     <div className="grid grid-cols-3 gap-4 mb-6">
@@ -46,5 +48,5 @@ export function SensitivityStats() {
         <p className="text-2xl font-semibold">{stats.minDeviation} mg/dL/U</p>
       </div>
     </div>
-  )
+  );
 } 
