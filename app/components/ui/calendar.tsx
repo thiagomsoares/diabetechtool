@@ -1,11 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { DayPicker } from "react-day-picker"
+import { DayPicker, type DayPickerDefaultProps } from "react-day-picker"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+
+// Definindo o tipo correto para os componentes personalizados
+type CustomComponents = NonNullable<DayPickerDefaultProps['components']>
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
@@ -54,9 +56,8 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        // Usando a tipagem correta para os componentes
-        PrevButton: () => <ChevronLeft className="h-4 w-4" />,
-        NextButton: () => <ChevronRight className="h-4 w-4" />
+        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
+        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />
       }}
       {...props}
     />
@@ -64,4 +65,4 @@ function Calendar({
 }
 Calendar.displayName = "Calendar"
 
-export { Calendar } 
+export { Calendar }
