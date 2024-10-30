@@ -1,11 +1,11 @@
 'use client'
 
 import React from 'react';
-import { useApp } from '../contexts/AppContext';
+import { useNightscoutData } from '../hooks/useNightscoutData';
 import { LoadingSpinner } from './LoadingSpinner';
 
 export function SensitivityStats() {
-  const { data, loading } = useApp();
+  const { data, loading } = useNightscoutData();
 
   if (loading) {
     return <LoadingSpinner />;
