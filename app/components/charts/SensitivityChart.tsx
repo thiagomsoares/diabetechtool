@@ -1,5 +1,4 @@
-import { useContext } from 'react'
-import { AppContext } from '../../contexts/AppContext'
+import { useApp } from '../../contexts/AppContext'
 import { Line } from 'react-chartjs-2'
 import { Feedback } from '../Feedback'
 import {
@@ -24,7 +23,7 @@ ChartJS.register(
 )
 
 export function SensitivityChart() {
-  const { data } = useContext(AppContext)
+  const { data } = useApp()
 
   if (!data) return null
 
