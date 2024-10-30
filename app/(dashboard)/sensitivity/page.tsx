@@ -29,10 +29,7 @@ export default function SensitivityPage() {
 
   useEffect(() => {
     if (dateRange.startDate && dateRange.endDate) {
-      fetchData({
-        startDate: dateRange.startDate.toISOString(),
-        endDate: dateRange.endDate.toISOString()
-      });
+      fetchData(dateRange);
     }
   }, [dateRange.startDate, dateRange.endDate]);
 
