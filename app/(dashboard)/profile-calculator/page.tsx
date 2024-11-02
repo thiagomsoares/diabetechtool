@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ProfileCalculations } from '@/app/utils/ProfileCalculations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -27,10 +27,15 @@ export default function ProfileCalculatorPage() {
   const [error, setError] = useState<string | null>(null);
   const calculator = new ProfileCalculations();
 
+  const motolFormRef = useRef<HTMLFormElement>(null);
+  const dpvFormRef = useRef<HTMLFormElement>(null);
+
   const handleMotolSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    const formData = new FormData(e.currentTarget);
+    
+    if (!motolFormRef.current) return;
+    const formData = new FormData(motolFormRef.current);
     
     try {
       const results = calculator.calculateMotolProfile(
@@ -48,7 +53,9 @@ export default function ProfileCalculatorPage() {
   const handleDPVSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    const formData = new FormData(e.currentTarget);
+    
+    if (!dpvFormRef.current) return;
+    const formData = new FormData(dpvFormRef.current);
     
     try {
       const results = calculator.calculateDPVProfile(
@@ -65,6 +72,11 @@ export default function ProfileCalculatorPage() {
 
   const renderResults = () => {
     if (!results) return null;
+
+    const formRef = activeTab === 'motol' ? motolFormRef.current : dpvFormRef.current;
+    if (!formRef) return null;
+
+    const formData = new FormData(formRef);
 
     const isfVariations = calculator.getISFVariations(
       Number(formData.get('age')),
@@ -210,7 +222,7 @@ export default function ProfileCalculatorPage() {
 
         <TabsContent value="motol">
           <Card>
-            <form onSubmit={handleMotolSubmit} className="space-y-4 p-6">
+            <form ref={motolFormRef} onSubmit={handleMotolSubmit} className="space-y-4 p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="motol-age">Idade (anos)</Label>
@@ -265,7 +277,7 @@ export default function ProfileCalculatorPage() {
 
         <TabsContent value="dpv">
           <Card>
-            <form onSubmit={handleDPVSubmit} className="space-y-4 p-6">
+            <form ref={dpvFormRef} onSubmit={handleDPVSubmit} className="space-y-4 p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="dpv-age">Idade (anos)</Label>
