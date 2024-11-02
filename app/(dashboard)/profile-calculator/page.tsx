@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import { ProfileCalculations } from '@/app/utils/ProfileCalculations';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
 import { Feedback } from '@/app/components/Feedback';
 
 export default function ProfileCalculatorPage() {
