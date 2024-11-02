@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ProfileCalculations } from '@/app/utils/ProfileCalculations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
 import { Feedback } from '@/app/components/Feedback';
+import Cookies from 'js-cookie';
 
 interface ProfileResults {
   totalBasal: number;
@@ -21,6 +22,21 @@ interface ProfileResults {
   }[];
 }
 
+interface NightscoutProfile {
+  defaultProfile: string;
+  store: {
+    [key: string]: {
+      dia: number;
+      carbratio: { time: string; value: number }[];
+      sens: { time: string; value: number }[];
+      basal: { time: string; value: number }[];
+      target_low: { time: string; value: number }[];
+      target_high: { time: string; value: number }[];
+      units: string;
+    };
+  };
+}
+
 export default function ProfileCalculatorPage() {
   const [activeTab, setActiveTab] = useState('motol');
   const [results, setResults] = useState<ProfileResults | null>(null);
@@ -29,6 +45,51 @@ export default function ProfileCalculatorPage() {
 
   const motolFormRef = useRef<HTMLFormElement>(null);
   const dpvFormRef = useRef<HTMLFormElement>(null);
+
+  const [nightscoutProfile, setNightscoutProfile] = useState<NightscoutProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchNightscoutProfile = async () => {
+      try {
+        setLoadingProfile(true);
+        setProfileError(null);
+
+        const config = localStorage.getItem('nightscout_config') || Cookies.get('nightscout_config');
+        if (!config) {
+          throw new Error('Configuração do Nightscout não encontrada');
+        }
+
+        const { baseUrl, apiSecret } = JSON.parse(config);
+        const response = await fetch('/api/nightscout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            url: `${baseUrl}/api/v1/profile`,
+            apiSecret
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Erro ao buscar perfil do Nightscout');
+        }
+
+        const profiles = await response.json();
+        if (profiles && profiles.length > 0) {
+          setNightscoutProfile(profiles[0]);
+        }
+      } catch (err) {
+        setProfileError(err instanceof Error ? err.message : 'Erro ao carregar perfil');
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    fetchNightscoutProfile();
+  }, []);
 
   const handleMotolSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -205,6 +266,172 @@ export default function ProfileCalculatorPage() {
     );
   };
 
+  const renderProfileComparison = () => {
+    if (loadingProfile) {
+      return (
+        <div className="flex justify-center p-6">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      );
+    }
+
+    if (profileError) {
+      return (
+        <Feedback
+          type="error"
+          message={profileError}
+        />
+      );
+    }
+
+    if (!nightscoutProfile || !results) {
+      return null;
+    }
+
+    const activeProfile = nightscoutProfile.store[nightscoutProfile.defaultProfile];
+    
+    // Organizar dados do perfil do Nightscout
+    const nsBasal = activeProfile.basal.map(b => ({
+      hour: parseInt(b.time.split(':')[0]),
+      rate: b.value.toFixed(3)
+    })).sort((a, b) => a.hour - b.hour);
+
+    const nsISF = activeProfile.sens.map(s => ({
+      time: s.time,
+      value: s.value.toFixed(2)
+    }));
+
+    const nsIC = activeProfile.carbratio.map(c => ({
+      time: c.time,
+      value: c.value.toFixed(1)
+    }));
+
+    return (
+      <Card className="mt-8">
+        <div className="p-6">
+          <h3 className="text-lg font-semibold mb-6">Comparação com Perfil Atual</h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Comparação Basal */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h4 className="text-lg font-medium mb-4">Perfil Basal</h4>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2">Hora</th>
+                      <th className="px-4 py-2">Calculado</th>
+                      <th className="px-4 py-2">Atual</th>
+                      <th className="px-4 py-2">Diferença</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.basalProfile.map((entry) => {
+                      const nsEntry = nsBasal.find(b => b.hour === entry.hour);
+                      const diff = nsEntry ? 
+                        ((parseFloat(entry.rate) - parseFloat(nsEntry.rate)) / parseFloat(nsEntry.rate) * 100).toFixed(1) : 
+                        'N/A';
+                      
+                      return (
+                        <tr key={entry.hour} className="hover:bg-gray-50">
+                          <td className="px-4 py-2">{entry.hour.toString().padStart(2, '0')}:00</td>
+                          <td className="px-4 py-2">{entry.rate}</td>
+                          <td className="px-4 py-2">{nsEntry?.rate || 'N/A'}</td>
+                          <td className={`px-4 py-2 ${parseFloat(diff) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {diff !== 'N/A' ? `${diff}%` : 'N/A'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Comparação ISF */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h4 className="text-lg font-medium mb-4">Sensibilidade (ISF)</h4>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2">Horário</th>
+                      <th className="px-4 py-2">Calculado</th>
+                      <th className="px-4 py-2">Atual</th>
+                      <th className="px-4 py-2">Diferença</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {calculator.getISFVariations(
+                      Number(formData.get('age')),
+                      results.isf,
+                      formData.get('units') === 'mmol'
+                    ).map((entry, index) => {
+                      const nsEntry = nsISF.find(s => s.time === entry.time);
+                      const diff = nsEntry ? 
+                        ((parseFloat(entry.isf) - parseFloat(nsEntry.value)) / parseFloat(nsEntry.value) * 100).toFixed(1) : 
+                        'N/A';
+                      
+                      return (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-4 py-2">{entry.time}</td>
+                          <td className="px-4 py-2">{entry.isf}</td>
+                          <td className="px-4 py-2">{nsEntry?.value || 'N/A'}</td>
+                          <td className={`px-4 py-2 ${parseFloat(diff) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {diff !== 'N/A' ? `${diff}%` : 'N/A'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Comparação IC */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h4 className="text-lg font-medium mb-4">Carboidratos (IC)</h4>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2">Horário</th>
+                      <th className="px-4 py-2">Calculado</th>
+                      <th className="px-4 py-2">Atual</th>
+                      <th className="px-4 py-2">Diferença</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {calculator.getICVariations(
+                      Number(formData.get('age')),
+                      results.ic
+                    ).map((entry, index) => {
+                      const nsEntry = nsIC.find(c => c.time === entry.time);
+                      const diff = nsEntry ? 
+                        ((parseFloat(entry.ic) - parseFloat(nsEntry.value)) / parseFloat(nsEntry.value) * 100).toFixed(1) : 
+                        'N/A';
+                      
+                      return (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-4 py-2">{entry.time}</td>
+                          <td className="px-4 py-2">{entry.ic}</td>
+                          <td className="px-4 py-2">{nsEntry?.value || 'N/A'}</td>
+                          <td className={`px-4 py-2 ${parseFloat(diff) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {diff !== 'N/A' ? `${diff}%` : 'N/A'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -346,6 +573,8 @@ export default function ProfileCalculatorPage() {
           {renderResults()}
         </Card>
       )}
+
+      {renderProfileComparison()}
     </div>
   );
 } 

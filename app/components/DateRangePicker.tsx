@@ -41,6 +41,10 @@ export const DateRangePicker = ({
       setError('A data inicial deve ser anterior à data final');
       return false;
     }
+    if (diffDays < 3) {
+      setError('O período mínimo é de 3 dias');
+      return false;
+    }
     setError(null);
     return true;
   };
@@ -92,7 +96,7 @@ export const DateRangePicker = ({
             title="Data Inicial"
             defaultDate={localStartDate}
             onSelectedDateChanged={handleStartDateChange}
-            maxDate={localEndDate}
+            maxDate={subDays(localEndDate, 3)}
             minDate={subDays(localEndDate, 7)}
             weekStart={0}
             labelTodayButton="Hoje"
@@ -113,7 +117,7 @@ export const DateRangePicker = ({
             title="Data Final"
             defaultDate={localEndDate}
             onSelectedDateChanged={handleEndDateChange}
-            minDate={localStartDate}
+            minDate={addDays(localStartDate, 3)}
             maxDate={addDays(localStartDate, 7)}
             weekStart={0}
             labelTodayButton="Hoje"
