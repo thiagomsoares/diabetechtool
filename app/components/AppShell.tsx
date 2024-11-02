@@ -9,7 +9,8 @@ import {
   Activity,
   UserCircle,
   LogOut,
-  Target
+  Target,
+  Calculator
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Tempo no Alvo', href: '/time-in-range', icon: Target },
   { name: 'Sensibilidade', href: '/sensitivity', icon: Activity },
+  { name: 'Calculadora de Perfil', href: '/profile-calculator', icon: Calculator },
   { name: 'Perfil', href: '/profile', icon: UserCircle },
   { name: 'Configurações', href: '/settings', icon: Settings },
 ];
