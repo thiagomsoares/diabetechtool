@@ -34,6 +34,10 @@ export default function TimeInRangePage() {
 
   useEffect(() => {
     if (dateRange.startDate && dateRange.endDate) {
+      console.log('Buscando dados para o período:', {
+        start: dateRange.startDate.toISOString(),
+        end: dateRange.endDate.toISOString()
+      });
       fetchData(dateRange);
     }
   }, [dateRange]);
@@ -102,7 +106,14 @@ export default function TimeInRangePage() {
   };
 
   const calculateDayStats = (glucoseValues: number[], timestamps: string[], date: Date) => {
+    if (!glucoseValues.length || !timestamps.length) {
+      console.log('Sem dados para calcular estatísticas');
+      return { hypo: 0, inRange: 0, hyper: 0 };
+    }
+
     const targetDate = date.toISOString().split('T')[0];
+    console.log('Calculando estatísticas para:', targetDate);
+
     const dayValues = timestamps
       .map((timestamp, index) => ({
         timestamp,
@@ -112,11 +123,19 @@ export default function TimeInRangePage() {
       .map(item => item.glucose);
 
     const total = dayValues.length;
+    console.log(`Total de leituras para ${targetDate}:`, total);
+
     if (total === 0) return { hypo: 0, inRange: 0, hyper: 0 };
 
     const hypo = dayValues.filter(v => v < settings.glucoseRange.min).length;
     const hyper = dayValues.filter(v => v > settings.glucoseRange.max).length;
     const inRange = total - hypo - hyper;
+
+    console.log('Estatísticas calculadas:', {
+      hypo: (hypo / total) * 100,
+      inRange: (inRange / total) * 100,
+      hyper: (hyper / total) * 100
+    });
 
     return {
       hypo: Math.round((hypo / total) * 100),
@@ -126,27 +145,40 @@ export default function TimeInRangePage() {
   };
 
   const processSelectedDayData = () => {
-    if (!data?.bgs || !data.timestamps) return [];
+    if (!data?.bgs || !data.timestamps) {
+      console.log('Dados não disponíveis para processamento');
+      return [];
+    }
 
     const targetDate = selectedDate.toISOString().split('T')[0];
-    const dayData = data.timestamps
-      .map((timestamp, index) => ({
-        timestamp,
-        glucose: data.bgs[index]
-      }))
-      .filter(item => item.timestamp.startsWith(targetDate));
+    console.log('Processando dados para a data:', targetDate);
 
-    return Array.from({ length: 24 }, (_, hour) => {
-      const hourData = dayData.filter(item => {
-        const itemHour = new Date(item.timestamp).getHours();
-        return itemHour === hour;
-      });
+    // Agrupar dados por hora
+    const hourlyData = Array.from({ length: 24 }, (_, hour) => {
+      const hourData = data.timestamps
+        .map((timestamp, index) => ({
+          timestamp,
+          glucose: data.bgs[index]
+        }))
+        .filter(item => {
+          const itemDate = new Date(item.timestamp);
+          return itemDate.toISOString().split('T')[0] === targetDate && 
+                 itemDate.getHours() === hour;
+        });
+
+      console.log(`Hora ${hour}: ${hourData.length} registros encontrados`);
 
       return {
         hour,
         values: hourData.map(item => item.glucose)
       };
     });
+
+    // Verificar se temos dados válidos
+    const totalReadings = hourlyData.reduce((sum, hour) => sum + hour.values.length, 0);
+    console.log('Total de leituras processadas:', totalReadings);
+
+    return hourlyData;
   };
 
   const stats = calculateStats();
@@ -241,33 +273,41 @@ export default function TimeInRangePage() {
                 </div>
               </div>
 
-              <HourlyDistributionChart data={processSelectedDayData()} />
+              {data.bgs.length > 0 ? (
+                <HourlyDistributionChart data={processSelectedDayData()} />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Sem dados disponíveis para este dia
+                </div>
+              )}
 
               {/* Resumo do Dia */}
-              <div className="mt-4 grid grid-cols-3 gap-4">
-                {data && data.bgs && data.timestamps && (
-                  <>
-                    <div className="bg-red-50 p-4 rounded-lg">
-                      <dt className="text-sm font-medium text-red-800">Hipoglicemia</dt>
-                      <dd className="mt-1 text-2xl font-semibold text-red-900">
-                        {calculateDayStats(data.bgs, data.timestamps, selectedDate).hypo}%
-                      </dd>
-                    </div>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <dt className="text-sm font-medium text-green-800">No Alvo</dt>
-                      <dd className="mt-1 text-2xl font-semibold text-green-900">
-                        {calculateDayStats(data.bgs, data.timestamps, selectedDate).inRange}%
-                      </dd>
-                    </div>
-                    <div className="bg-yellow-50 p-4 rounded-lg">
-                      <dt className="text-sm font-medium text-yellow-800">Hiperglicemia</dt>
-                      <dd className="mt-1 text-2xl font-semibold text-yellow-900">
-                        {calculateDayStats(data.bgs, data.timestamps, selectedDate).hyper}%
-                      </dd>
-                    </div>
-                  </>
-                )}
-              </div>
+              {data.bgs.length > 0 && (
+                <div className="mt-4 grid grid-cols-3 gap-4">
+                  {data && data.bgs && data.timestamps && (
+                    <>
+                      <div className="bg-red-50 p-4 rounded-lg">
+                        <dt className="text-sm font-medium text-red-800">Hipoglicemia</dt>
+                        <dd className="mt-1 text-2xl font-semibold text-red-900">
+                          {calculateDayStats(data.bgs, data.timestamps, selectedDate).hypo}%
+                        </dd>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <dt className="text-sm font-medium text-green-800">No Alvo</dt>
+                        <dd className="mt-1 text-2xl font-semibold text-green-900">
+                          {calculateDayStats(data.bgs, data.timestamps, selectedDate).inRange}%
+                        </dd>
+                      </div>
+                      <div className="bg-yellow-50 p-4 rounded-lg">
+                        <dt className="text-sm font-medium text-yellow-800">Hiperglicemia</dt>
+                        <dd className="mt-1 text-2xl font-semibold text-yellow-900">
+                          {calculateDayStats(data.bgs, data.timestamps, selectedDate).hyper}%
+                        </dd>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </Transition>
