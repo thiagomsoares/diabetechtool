@@ -2,21 +2,13 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  async rewrites() {
-    const nightscoutUrl = process.env.NEXT_PUBLIC_NIGHTSCOUT_API_URL;
-    // Garantir que a URL começa com http:// ou https://
-    const baseUrl = nightscoutUrl?.startsWith('http') 
-      ? nightscoutUrl 
-      : `https://${nightscoutUrl}`;
-
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${baseUrl}/api/:path*`,
-      },
-    ];
+  typescript: {
+    ignoreBuildErrors: true,
   },
-  async headers() {
+  experimental: {
+    optimizeFonts: true,
+  },
+  headers: async () => {
     return [
       {
         source: '/api/:path*',
@@ -27,14 +19,16 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, api-secret' },
         ],
       },
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
     ];
-  },
-  typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // !! WARN !!
-    ignoreBuildErrors: true,
   },
 };
 

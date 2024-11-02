@@ -279,18 +279,12 @@ export const useNightscoutData = () => {
       const startDate = new Date(dateRange.startDate);
       const endDate = new Date(dateRange.endDate);
       
-      // Garantir que as datas são válidas
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         throw new Error('Datas inválidas');
       }
 
       const formattedStartDate = format(startDate, 'yyyy-MM-dd');
       const formattedEndDate = format(addDays(endDate, 1), 'yyyy-MM-dd');
-
-      console.log('Buscando dados:', {
-        startDate: formattedStartDate,
-        endDate: formattedEndDate
-      });
 
       // Calcular o número de pontos baseado no intervalo do sensor
       const diffMinutes = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60));
@@ -375,7 +369,7 @@ export const useNightscoutData = () => {
       }
 
     } catch (err) {
-      console.error('Erro detalhado:', err);
+      console.error('Erro ao buscar dados:', err);
       setError(err instanceof Error ? err.message : 'Erro ao buscar dados');
     } finally {
       setLoading(false);
