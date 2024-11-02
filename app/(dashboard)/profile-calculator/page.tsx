@@ -10,9 +10,20 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
 import { Feedback } from '@/app/components/Feedback';
 
+interface ProfileResults {
+  totalBasal: number;
+  isf: number;
+  ic: number;
+  tdd: number;
+  basalProfile: {
+    hour: number;
+    rate: string;
+  }[];
+}
+
 export default function ProfileCalculatorPage() {
   const [activeTab, setActiveTab] = useState('motol');
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<ProfileResults | null>(null);
   const [error, setError] = useState<string | null>(null);
   const calculator = new ProfileCalculations();
 
@@ -52,6 +63,63 @@ export default function ProfileCalculatorPage() {
     }
   };
 
+  const renderResults = () => {
+    if (!results) return null;
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h4 className="text-sm font-medium text-gray-500">Total Basal</h4>
+            <p className="mt-1 text-2xl font-semibold">{results.totalBasal.toFixed(2)} U</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h4 className="text-sm font-medium text-gray-500">ISF</h4>
+            <p className="mt-1 text-2xl font-semibold">{results.isf.toFixed(2)} mg/dL/U</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h4 className="text-sm font-medium text-gray-500">IC</h4>
+            <p className="mt-1 text-2xl font-semibold">{results.ic.toFixed(2)} g/U</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h4 className="text-sm font-medium text-gray-500">TDD</h4>
+            <p className="mt-1 text-2xl font-semibold">{results.tdd.toFixed(2)} U</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h4 className="text-lg font-medium mb-4">Perfil Basal</h4>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Hora
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Taxa (U/h)
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {results.basalProfile.map((entry) => (
+                  <tr key={entry.hour}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {entry.hour.toString().padStart(2, '0')}:00
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {entry.rate}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -61,7 +129,7 @@ export default function ProfileCalculatorPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="motol" className="w-full">
+      <Tabs defaultValue="motol" className="w-full" onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="motol">Método Motol</TabsTrigger>
           <TabsTrigger value="dpv">Método DPV</TabsTrigger>
@@ -125,7 +193,56 @@ export default function ProfileCalculatorPage() {
         <TabsContent value="dpv">
           <Card>
             <form onSubmit={handleDPVSubmit} className="space-y-4 p-6">
-              {/* Similar form structure for DPV method */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dpv-age">Idade (anos)</Label>
+                  <Input
+                    id="dpv-age"
+                    name="age"
+                    type="number"
+                    required
+                    min="1"
+                    max="18"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dpv-tdd">TDD (U)</Label>
+                  <Input
+                    id="dpv-tdd"
+                    name="tdd"
+                    type="number"
+                    required
+                    min="5"
+                    max="150"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dpv-basalpct">Porcentagem Basal (%)</Label>
+                  <Input
+                    id="dpv-basalpct"
+                    name="basalPct"
+                    type="number"
+                    required
+                    min="32"
+                    max="37"
+                    placeholder="32-37%"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Unidades</Label>
+                  <RadioGroup defaultValue="mgdl" name="units">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="mgdl" id="dpv-mgdl" />
+                      <Label htmlFor="dpv-mgdl">mg/dL</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="mmol" id="dpv-mmol" />
+                      <Label htmlFor="dpv-mmol">mmol/L</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </div>
+              <Button type="submit">Calcular</Button>
             </form>
           </Card>
         </TabsContent>
@@ -141,7 +258,7 @@ export default function ProfileCalculatorPage() {
       {results && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Resultados</h3>
-          {/* Display results here */}
+          {renderResults()}
         </Card>
       )}
     </div>

@@ -10,7 +10,8 @@ import {
   UserCircle,
   LogOut,
   Target,
-  Calculator
+  Calculator,
+  History
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Calculadora de Perfil', href: '/profile-calculator', icon: Calculator },
   { name: 'Perfil', href: '/profile', icon: UserCircle },
   { name: 'Configurações', href: '/settings', icon: Settings },
+  { name: 'Changelog', href: '/changelog', icon: History },
 ];
 
 interface AppShellProps {
