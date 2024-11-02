@@ -160,4 +160,34 @@ export class ProfileCalculations {
   private sumArray(arr: number[]) {
     return arr.reduce((a, b) => a + b, 0);
   }
+
+  getISFVariations(age: number, baseISF: number, isMMOL: boolean) {
+    const variations = age <= 5 ? 
+      [0.0, -2.0, 0.0, 0.0, -2.0, 0.0, -2.0] :
+      age <= 11 ?
+        [0.0, -1.0, 0.0, 0.0, -1.0, 0.0, -1.0] :
+        [0.2, 0.0, 0.2, 0.2, 0.0, 0.2, 0.2];
+
+    const times = ["00:00", "06:00", "09:00", "11:00", "14:00", "16:00", "19:00"];
+    
+    return times.map((time, i) => ({
+      time: time,
+      isf: (isMMOL ? (baseISF + variations[i]) * 0.0555 : baseISF + variations[i]).toFixed(2)
+    }));
+  }
+
+  getICVariations(age: number, baseIC: number) {
+    const variations = age <= 5 ? 
+      [0.0, -4.0, -1.0, -2.0, -4.0, 0.0, -4.0] :
+      age <= 11 ?
+        [0.0, -3.0, 0.0, -1.0, -3.0, 0.0, -2.0] :
+        [0.0, -1.0, 0.0, 0.0, -1.0, 0.0, -1.0];
+
+    const times = ["00:00", "06:00", "09:00", "11:00", "14:00", "16:00", "19:00"];
+    
+    return times.map((time, i) => ({
+      time: time,
+      ic: (baseIC + variations[i]).toFixed(1)
+    }));
+  }
 } 
