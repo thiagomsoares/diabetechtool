@@ -222,80 +222,61 @@ export const Dashboard = () => {
         <Transition>
           {data.isfDynamic.length > 0 ? (
             <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Tempo no Alvo
-                </h3>
-                <GlucoseStats glucoseValues={data.bgs} />
-              </div>
+              {data.bgs.length > 0 && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Tempo no Alvo
+                  </h3>
+                  <GlucoseStats glucoseValues={data.bgs} />
+                </div>
+              )}
 
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-                  <dt className="truncate text-sm font-medium text-gray-500">Média Glicemia</dt>
-                  <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
-                    {calculateAverage(data.bgs)} mg/dL
-                  </dd>
+              {data.timestamps.length > 0 && data.bgs.length > 0 && (
+                <div className="rounded-lg bg-white shadow">
+                  <div className="p-6">
+                    <h3 className="text-base font-semibold leading-6 text-gray-900">Glicemia vs Tempo</h3>
+                    <LineChart
+                      data={{
+                        timestamps: data.timestamps,
+                        values1: data.bgs,
+                        values2: [],
+                        title: '',
+                        yaxis: 'Glicemia (mg/dL)',
+                        series1Name: 'Glicemia',
+                        series2Name: ''
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-                  <dt className="truncate text-sm font-medium text-gray-500">Média ISF Dinâmico</dt>
-                  <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
-                    {calculateAverage(data.isfDynamic)}
-                  </dd>
-                </div>
-                <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-                  <dt className="truncate text-sm font-medium text-gray-500">Média ISF Perfil</dt>
-                  <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
-                    {calculateAverageISF(data.isfProfile)}
-                  </dd>
-                </div>
-                <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-                  <dt className="truncate text-sm font-medium text-gray-500">Desvio Médio</dt>
-                  <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
-                    {calculateAverage(data.deviations)}%
-                  </dd>
-                </div>
-              </div>
+              )}
 
-              <div className="rounded-lg bg-white shadow">
-                <div className="p-6">
-                  <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">Glicemia vs Tempo</h3>
-                  <LineChart
-                    data={{
-                      timestamps: data.timestamps || [],
-                      values1: data.bgs || [],
-                      values2: [],
-                      title: '',
-                      yaxis: 'Glicemia (mg/dL)',
-                      series1Name: 'Glicemia',
-                      series2Name: ''
-                    }}
-                  />
+              {data.timestamps.length > 0 && data.isfDynamic.length > 0 && data.isfProfile.length > 0 && (
+                <div className="rounded-lg bg-white shadow">
+                  <div className="p-6">
+                    <h3 className="text-base font-semibold leading-6 text-gray-900">ISF Dinâmico vs Perfil</h3>
+                    <LineChart
+                      data={{
+                        timestamps: data.timestamps,
+                        values1: data.isfDynamic,
+                        values2: data.isfProfile,
+                        title: '',
+                        yaxis: 'ISF',
+                        series1Name: 'ISF Dinâmico',
+                        series2Name: 'ISF Perfil'
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="rounded-lg bg-white shadow">
-                <div className="p-6">
-                  <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">ISF Dinâmico vs Perfil</h3>
-                  <LineChart
-                    data={{
-                      timestamps: data.timestamps || [],
-                      values1: data.isfDynamic || [],
-                      values2: data.isfProfile || [],
-                      title: '',
-                      yaxis: 'ISF',
-                      series1Name: 'ISF Dinâmico',
-                      series2Name: 'ISF Perfil'
-                    }}
-                  />
+              {data.tableData.length > 0 && (
+                <div className="rounded-lg bg-white shadow">
+                  <div className="px-4 py-5 sm:p-6">
+                    <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">Dados Detalhados</h3>
+                    <DataTable data={data.tableData} />
+                  </div>
                 </div>
-              </div>
-
-              <div className="rounded-lg bg-white shadow">
-                <div className="px-4 py-5 sm:p-6">
-                  <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">Dados Detalhados</h3>
-                  <DataTable data={data.tableData || []} />
-                </div>
-              </div>
+              )}
             </div>
           ) : (
             renderAlternativeView()

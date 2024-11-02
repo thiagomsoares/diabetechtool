@@ -288,6 +288,11 @@ export default function ProfileCalculatorPage() {
       return null;
     }
 
+    const activeForm = activeTab === 'motol' ? motolFormRef.current : dpvFormRef.current;
+    if (!activeForm) return null;
+    
+    const formData = new FormData(activeForm);
+
     const activeProfile = nightscoutProfile.store[nightscoutProfile.defaultProfile];
     
     // Organizar dados do perfil do Nightscout
@@ -305,6 +310,18 @@ export default function ProfileCalculatorPage() {
       time: c.time,
       value: c.value.toFixed(1)
     }));
+
+    // Obter variações de ISF e IC usando os dados do formulário ativo
+    const isfVariations = calculator.getISFVariations(
+      Number(formData.get('age')),
+      results.isf,
+      formData.get('units') === 'mmol'
+    );
+
+    const icVariations = calculator.getICVariations(
+      Number(formData.get('age')),
+      results.ic
+    );
 
     return (
       <Card className="mt-8">
@@ -362,11 +379,7 @@ export default function ProfileCalculatorPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {calculator.getISFVariations(
-                      Number(formData.get('age')),
-                      results.isf,
-                      formData.get('units') === 'mmol'
-                    ).map((entry, index) => {
+                    {isfVariations.map((entry, index) => {
                       const nsEntry = nsISF.find(s => s.time === entry.time);
                       const diff = nsEntry ? 
                         ((parseFloat(entry.isf) - parseFloat(nsEntry.value)) / parseFloat(nsEntry.value) * 100).toFixed(1) : 
@@ -402,10 +415,7 @@ export default function ProfileCalculatorPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {calculator.getICVariations(
-                      Number(formData.get('age')),
-                      results.ic
-                    ).map((entry, index) => {
+                    {icVariations.map((entry, index) => {
                       const nsEntry = nsIC.find(c => c.time === entry.time);
                       const diff = nsEntry ? 
                         ((parseFloat(entry.ic) - parseFloat(nsEntry.value)) / parseFloat(nsEntry.value) * 100).toFixed(1) : 

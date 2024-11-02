@@ -147,9 +147,10 @@ export const useNightscoutData = () => {
   };
 
   const processData = (devicestatus: DeviceStatus[], profiles: NightscoutProfile[]) => {
-    console.log('Processando dados:', { devicestatus, profiles });
-    const total = devicestatus.length;
-    let current = 0;
+    console.log('Iniciando processamento de dados:', {
+      devicestatusCount: devicestatus.length,
+      profilesCount: profiles.length
+    });
 
     const processedData: ProcessedData = {
       timestamps: [],
@@ -164,12 +165,10 @@ export const useNightscoutData = () => {
     // Ordenar devicestatus por data
     devicestatus.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-    devicestatus.forEach(status => {
-      current++;
-      if (current % 100 === 0) {
-        setLoadingStats({ current, total });
-      }
+    let processedCount = 0;
+    let skippedCount = 0;
 
+    devicestatus.forEach(status => {
       if (status.openaps?.suggested) {
         const suggested = status.openaps.suggested;
         const timestamp = new Date(status.created_at).toISOString();
@@ -214,14 +213,30 @@ export const useNightscoutData = () => {
             isfProfile,
             deviation
           });
+
+          processedCount++;
+        } else {
+          skippedCount++;
         }
+      }
+    });
+
+    console.log('Processamento concluído:', {
+      processedCount,
+      skippedCount,
+      resultSize: {
+        timestamps: processedData.timestamps.length,
+        bgs: processedData.bgs.length,
+        isfDynamic: processedData.isfDynamic.length,
+        isfProfile: processedData.isfProfile.length,
+        deviations: processedData.deviations.length,
+        tableData: processedData.tableData.length
       }
     });
 
     // Processar estatísticas por hora
     processedData.hourlyStats = processHourlyData(processedData);
 
-    setLoadingStats(null);
     return processedData;
   };
 
