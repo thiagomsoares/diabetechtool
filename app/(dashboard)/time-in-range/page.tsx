@@ -49,11 +49,13 @@ export default function TimeInRangePage() {
   };
 
   useEffect(() => {
-    // Inicialização com as últimas 24 horas
     const end = new Date();
     const start = new Date();
-    start.setHours(end.getHours() - 24);
-    updateAllDates(start, end);
+    start.setDate(end.getDate() - 3); // 3 dias atrás
+    start.setHours(0, 0, 0, 0); // Início do dia
+    end.setHours(23, 59, 59, 999); // Fim do dia
+    
+    setDateRange({ startDate: start, endDate: end });
   }, []);
 
   // Funções de navegação do calendário diário

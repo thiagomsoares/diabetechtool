@@ -39,8 +39,10 @@ export const Dashboard = () => {
       setNightscoutUrl(baseUrl);
 
       const end = new Date();
-      const start = new Date(end);
-      start.setHours(start.getHours() - 24);
+      const start = new Date();
+      start.setDate(end.getDate() - 3);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
       
       setDateRange({ startDate: start, endDate: end });
     }
