@@ -15,6 +15,21 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: '1.2.1',
+    date: '2024-03-21',
+    type: 'patch',
+    changes: [
+      {
+        type: 'changed',
+        description: 'Removidos botões de período de 14 e 30 dias'
+      },
+      {
+        type: 'changed',
+        description: 'Simplificação da interface com apenas opções de 3 e 7 dias'
+      }
+    ]
+  },
+  {
     version: '1.2.0',
     date: '2024-03-21',
     type: 'minor',
