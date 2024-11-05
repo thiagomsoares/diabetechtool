@@ -161,13 +161,9 @@ export const Dashboard = () => {
   const handlePeriodSelect = (days: number) => {
     const end = new Date();
     const start = new Date();
-    if (days === 0) {
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    } else {
-      start.setDate(end.getDate() - days);
-      start.setHours(0, 0, 0, 0);
-    }
+    start.setDate(end.getDate() - days);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
     setDateRange({ startDate: start, endDate: end });
     fetchData({ startDate: start, endDate: end });
   };
