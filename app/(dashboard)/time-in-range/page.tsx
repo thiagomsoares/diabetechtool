@@ -9,7 +9,8 @@ import { Transition } from '@/app/components/Transition';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { HourlyDistributionChart } from '@/app/components/charts/HourlyDistributionChart';
-import { QuickDateButtons } from '@/app/components/QuickDateButtons';
+import { QuickDateButtons } from '@/app/components';
+import type { QuickDateButtonsProps } from '@/app/types/components';
 import { useApp } from '@/app/contexts/AppContext';
 
 export default function TimeInRangePage() {
@@ -25,23 +26,12 @@ export default function TimeInRangePage() {
   useEffect(() => {
     const end = new Date();
     const start = new Date();
-    start.setDate(end.getDate() - 3); // 3 dias atrás
-    start.setHours(0, 0, 0, 0); // Início do dia
-    end.setHours(23, 59, 59, 999); // Fim do dia
+    start.setDate(end.getDate() - 3);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
     
     setDateRange({ startDate: start, endDate: end });
-    setSelectedDate(end);
   }, []);
-
-  useEffect(() => {
-    if (dateRange.startDate && dateRange.endDate) {
-      console.log('Buscando dados para o período:', {
-        start: dateRange.startDate.toISOString(),
-        end: dateRange.endDate.toISOString()
-      });
-      fetchData(dateRange);
-    }
-  }, [dateRange]);
 
   const handlePeriodSelect = (days: number) => {
     setSelectedPeriod(days);
@@ -51,10 +41,9 @@ export default function TimeInRangePage() {
     start.setHours(0, 0, 0, 0);
     end.setHours(23, 59, 59, 999);
     setDateRange({ startDate: start, endDate: end });
-    setSelectedDate(end);
   };
 
-  const handleDateRangeChange = (dates: { startDate: Date; endDate: Date }) => {
+  const handleDateChange = (dates: { startDate: Date; endDate: Date }) => {
     setDateRange(dates);
     setSelectedDate(dates.endDate);
   };
@@ -196,7 +185,7 @@ export default function TimeInRangePage() {
         <DateRangePicker
           startDate={dateRange.startDate}
           endDate={dateRange.endDate}
-          onChange={handleDateRangeChange}
+          onChange={handleDateChange}
           onSearch={() => fetchData(dateRange)}
           isLoading={loading}
         />

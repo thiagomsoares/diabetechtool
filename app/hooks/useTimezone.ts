@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { format, zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
+import { format, parseISO } from 'date-fns';
+import { zonedTimeToUtc, formatInTimeZone } from 'date-fns-tz';
 import Cookies from 'js-cookie';
 
 export const useTimezone = () => {
@@ -41,16 +42,32 @@ export const useTimezone = () => {
   }, []);
 
   const convertToUserTime = (utcDate: string | Date) => {
-    return utcToZonedTime(new Date(utcDate), timezone);
+    try {
+      const date = typeof utcDate === 'string' ? parseISO(utcDate) : utcDate;
+      return formatInTimeZone(date, timezone, 'yyyy-MM-dd HH:mm:ss');
+    } catch (error) {
+      console.error('Erro ao converter para timezone do usuário:', error);
+      return format(new Date(utcDate), 'yyyy-MM-dd HH:mm:ss');
+    }
   };
 
   const convertToUTC = (localDate: Date) => {
-    return zonedTimeToUtc(localDate, timezone);
+    try {
+      return zonedTimeToUtc(localDate, timezone);
+    } catch (error) {
+      console.error('Erro ao converter para UTC:', error);
+      return localDate;
+    }
   };
 
   const formatInUserTimezone = (date: Date | string, formatString: string) => {
-    const zonedDate = convertToUserTime(date);
-    return format(zonedDate, formatString, { timeZone: timezone });
+    try {
+      const parsedDate = typeof date === 'string' ? parseISO(date) : date;
+      return formatInTimeZone(parsedDate, timezone, formatString);
+    } catch (error) {
+      console.error('Erro ao formatar data:', error);
+      return format(new Date(date), formatString);
+    }
   };
 
   return {

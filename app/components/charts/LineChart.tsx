@@ -1,94 +1,180 @@
 'use client'
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import dynamic from 'next/dynamic';
-import { Layout, Config, Data } from 'plotly.js';
+import { Layout, Config } from 'plotly.js';
 import { useTimezone } from '@/app/hooks/useTimezone';
-import { format } from 'date-fns';
+import { useApp } from '@/app/contexts/AppContext';
+import { format, parseISO, setYear, setMonth, setDate } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 
+// Importação dinâmica do Plotly para evitar problemas de SSR
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
-
-interface DayData {
-  date: string;
-  values: number[];
-  timestamps: string[];
-}
 
 interface LineChartProps {
   data: {
-    timestamps: string[];
-    values1: number[];
-    values2: number[];
-    title: string;
-    yaxis: string;
-    series1Name: string;
-    series2Name: string;
+    timestamps: string[];    // Array de timestamps em ISO string
+    values1: number[];      // Valores primários (ex: glicemia)
+    values2: number[];      // Valores secundários (opcional, ex: ISF)
+    title: string;          // Título do gráfico
+    yaxis: string;          // Label do eixo Y
+    series1Name: string;    // Nome da série primária
+    series2Name: string;    // Nome da série secundária
   };
 }
 
 export const LineChart = ({ data }: LineChartProps) => {
   const { timezone } = useTimezone();
-  const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set());
-  const [daysData, setDaysData] = useState<DayData[]>([]);
+  const { settings } = useApp();
 
-  useEffect(() => {
-    // Agrupar dados por dia
-    const groupedData = data.timestamps.reduce((acc: { [key: string]: DayData }, timestamp, index) => {
-      const date = timestamp.split('T')[0];
-      if (!acc[date]) {
-        acc[date] = {
-          date,
-          values: Array(24).fill(null),
-          timestamps: Array(24).fill(null)
+  /**
+   * Calcula o range dinâmico do eixo Y baseado nos valores
+   * Arredonda para a dezena mais próxima e mantém um mínimo de 40
+   */
+  const calculateDynamicRange = (values: number[]) => {
+    if (!values.length) return [0, 400];
+    
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    
+    const floorTo10 = (num: number) => Math.floor(num / 10) * 10;
+    const ceilTo10 = (num: number) => Math.ceil(num / 10) * 10;
+    
+    return [
+      Math.max(40, floorTo10(minValue)),  // Não permite valores menores que 40
+      ceilTo10(maxValue)                  // Arredonda para cima para a próxima dezena
+    ];
+  };
+
+  /**
+   * Normaliza todos os timestamps para um mesmo dia de referência (01/01/2000)
+   * Isso permite sobrepor os dados de diferentes dias no mesmo período de 24h
+   */
+  const normalizeToSameDay = (timestamp: string) => {
+    const date = parseISO(timestamp);
+    const normalized = setYear(setMonth(setDate(date, 1), 0), 2000);
+    return normalized.toISOString();
+  };
+
+  /**
+   * Agrupa os dados por dia, considerando o timezone do usuário
+   * Cada dia terá seus próprios timestamps e valores, normalizados para sobreposição
+   */
+  const groupDataByDay = () => {
+    const groupedData: { [key: string]: { timestamps: string[]; values: number[] } } = {};
+
+    data.timestamps.forEach((timestamp, index) => {
+      // Agrupa usando a data local do usuário, não UTC
+      const date = formatInTimeZone(parseISO(timestamp), timezone, 'yyyy-MM-dd');
+      if (!groupedData[date]) {
+        groupedData[date] = {
+          timestamps: [],
+          values: []
         };
       }
-      const hour = new Date(timestamp).getHours();
-      acc[date].values[hour] = data.values1[index];
-      acc[date].timestamps[hour] = timestamp;
-      return acc;
-    }, {});
+      // Normaliza o timestamp para sobrepor no gráfico
+      const normalizedTimestamp = normalizeToSameDay(timestamp);
+      groupedData[date].timestamps.push(normalizedTimestamp);
+      groupedData[date].values.push(data.values1[index]);
+    });
 
-    setDaysData(Object.values(groupedData));
-    // Selecionar o dia mais recente por padrão
-    const mostRecentDate = Object.keys(groupedData).sort().pop();
-    if (mostRecentDate) {
-      setSelectedDays(new Set([mostRecentDate]));
-    }
-  }, [data]);
+    // Ordena os timestamps dentro de cada dia para garantir a continuidade das linhas
+    Object.keys(groupedData).forEach(date => {
+      const indices = groupedData[date].timestamps
+        .map((_, i) => i)
+        .sort((a, b) => new Date(groupedData[date].timestamps[a]).getTime() - 
+                        new Date(groupedData[date].timestamps[b]).getTime());
+      
+      groupedData[date].timestamps = indices.map(i => groupedData[date].timestamps[i]);
+      groupedData[date].values = indices.map(i => groupedData[date].values[i]);
+    });
 
-  const plotData: Partial<Data>[] = Array.from(selectedDays).map(date => {
-    const dayData = daysData.find(d => d.date === date);
-    if (!dayData) return null;
+    // Retorna array com dados agrupados e formatados
+    return Object.entries(groupedData).map(([date, dayData]) => ({
+      date: formatInTimeZone(parseISO(date), timezone, 'dd/MM/yyyy'),
+      ...dayData
+    }));
+  };
 
-    // Criar array de 24 horas
-    const hours = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
-    
+  /**
+   * Calcula o range efetivo dos dados para o eixo X
+   * Retorna o primeiro e último horário onde existem dados
+   * Adiciona uma margem de 30 minutos antes e depois para melhor visualização
+   */
+  const calculateTimeRange = (sortedData: ReturnType<typeof groupDataByDay>) => {
+    let minTime = '23:59';
+    let maxTime = '00:00';
+
+    sortedData.forEach(dayData => {
+      dayData.timestamps.forEach(timestamp => {
+        const time = formatInTimeZone(parseISO(timestamp), timezone, 'HH:mm');
+        if (time < minTime) minTime = time;
+        if (time > maxTime) maxTime = time;
+      });
+    });
+
+    // Converte os horários para objetos Date para poder adicionar/subtrair minutos
+    const startDate = new Date(2000, 0, 1, 
+      parseInt(minTime.split(':')[0]), 
+      parseInt(minTime.split(':')[1])
+    );
+    const endDate = new Date(2000, 0, 1, 
+      parseInt(maxTime.split(':')[0]), 
+      parseInt(maxTime.split(':')[1])
+    );
+
+    // Subtrai 30 minutos do início e adiciona 30 minutos ao fim
+    startDate.setMinutes(startDate.getMinutes() - 30);
+    endDate.setMinutes(endDate.getMinutes() + 30);
+
+    // Formata de volta para string
     return {
-      x: hours,
-      y: dayData.values,
-      type: 'scatter',
-      mode: 'lines',
-      name: format(new Date(date), 'dd/MM/yyyy'),
-      line: { width: 2 },
-      connectgaps: true // Conecta pontos mesmo com valores null
+      start: startDate.toISOString(),
+      end: endDate.toISOString()
     };
-  }).filter(Boolean) as Partial<Data>[];
+  };
 
+  const sortedData = groupDataByDay();
+  const yAxisRange = calculateDynamicRange(data.values1);
+  const timeRange = calculateTimeRange(sortedData);
+
+  // Cria uma série para cada dia, permitindo sobreposição no gráfico
+  const plotData = sortedData.map((dayData) => ({
+    x: dayData.timestamps,
+    y: dayData.values,
+    type: 'scatter' as const,
+    mode: 'lines+markers' as const,
+    name: dayData.date,
+    line: { width: 2 },
+    connectgaps: true  // Conecta pontos mesmo com gaps nos dados
+  }));
+
+  // Configuração do layout do gráfico
   const layout: Partial<Layout> = {
     title: data.title,
     yaxis: { 
       title: data.yaxis,
-      range: [40, 400],
-      gridcolor: '#f0f0f0'
+      range: yAxisRange,
+      gridcolor: '#f0f0f0',
+      fixedrange: false
     },
     xaxis: {
       title: 'Horário',
       tickformat: '%H:%M',
       gridcolor: '#f0f0f0',
-      range: ['00:00', '23:59'],
+      range: [timeRange.start, timeRange.end],
       tickmode: 'array',
-      ticktext: Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`),
-      tickvals: Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`)
+      ticktext: Array.from({ length: 24 }, (_, i) => 
+        formatInTimeZone(
+          new Date(2000, 0, 1, i, 0), 
+          timezone, 
+          'HH:mm'
+        )
+      ),
+      tickvals: Array.from({ length: 24 }, (_, i) => 
+        new Date(2000, 0, 1, i, 0).toISOString()
+      ),
+      fixedrange: false
     },
     showlegend: true,
     legend: { 
@@ -100,36 +186,35 @@ export const LineChart = ({ data }: LineChartProps) => {
       borderwidth: 1
     },
     margin: { 
-      t: 40, 
-      r: 150,
+      t: 60, 
+      r: 150,  // Margem maior à direita para a legenda
       l: 50, 
       b: 40 
     },
     height: 400,
     plot_bgcolor: 'white',
     paper_bgcolor: 'white',
-    hovermode: 'x unified',
+    hovermode: 'x unified',  // Mostra todos os valores do mesmo horário
+    // Linhas de referência para o range alvo
     shapes: [
-      // Linha para hipo
       {
         type: 'line',
-        x0: '00:00',
-        x1: '23:59',
-        y0: 70,
-        y1: 70,
+        x0: timeRange.start,
+        x1: timeRange.end,
+        y0: settings.glucoseRange.min,
+        y1: settings.glucoseRange.min,
         line: {
           color: 'red',
           width: 1,
           dash: 'dash'
         }
       },
-      // Linha para hiper
       {
         type: 'line',
-        x0: '00:00',
-        x1: '23:59',
-        y0: 180,
-        y1: 180,
+        x0: timeRange.start,
+        x1: timeRange.end,
+        y0: settings.glucoseRange.max,
+        y1: settings.glucoseRange.max,
         line: {
           color: 'red',
           width: 1,
@@ -139,41 +224,18 @@ export const LineChart = ({ data }: LineChartProps) => {
     ]
   };
 
+  // Configurações de interatividade do gráfico
   const config: Partial<Config> = {
     responsive: true,
     displayModeBar: true,
     modeBarButtonsToRemove: ['lasso2d', 'select2d'],
-    displaylogo: false
+    displaylogo: false,
+    scrollZoom: true,
+    doubleClick: 'reset'
   };
 
   return (
     <div className="relative">
-      <div className="absolute right-0 top-0 w-40 bg-white shadow-lg rounded-lg p-4 z-10">
-        <h4 className="text-sm font-medium mb-2">Selecionar Dias</h4>
-        <div className="space-y-2 max-h-60 overflow-y-auto">
-          {daysData.map((day) => (
-            <label key={day.date} className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={selectedDays.has(day.date)}
-                onChange={(e) => {
-                  const newSelected = new Set(selectedDays);
-                  if (e.target.checked) {
-                    newSelected.add(day.date);
-                  } else {
-                    newSelected.delete(day.date);
-                  }
-                  setSelectedDays(newSelected);
-                }}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm">
-                {format(new Date(day.date), 'dd/MM/yyyy')}
-              </span>
-            </label>
-          ))}
-        </div>
-      </div>
       <Plot
         data={plotData}
         layout={layout}
@@ -186,4 +248,4 @@ export const LineChart = ({ data }: LineChartProps) => {
       </div>
     </div>
   );
-}; 
+};

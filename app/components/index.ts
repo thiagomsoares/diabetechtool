@@ -1,0 +1,3 @@
+export { QuickDateButtons } from './QuickDateButtons';
+export type { QuickDateButtonsProps } from '@/app/types/components';
+// ... outros exports ... 
