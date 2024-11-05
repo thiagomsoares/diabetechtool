@@ -109,6 +109,25 @@ const releases: Release[] = [
         description: 'Configurações personalizáveis'
       }
     ]
+  },
+  {
+    version: '1.3.0',
+    date: '2024-03-22',
+    type: 'minor',
+    changes: [
+      {
+        type: 'changed',
+        description: 'Migração para Bun para melhor performance'
+      },
+      {
+        type: 'fixed',
+        description: 'Correção na exibição de dados por período'
+      },
+      {
+        type: 'added',
+        description: 'Otimização no carregamento e build do projeto'
+      }
+    ]
   }
 ];
 

@@ -23,6 +23,7 @@ Diabetech é uma ferramenta gratuita e de código aberto para análise avançada
 
 ## 🚀 Tecnologias
 
+- [Bun](https://bun.sh)
 - [Next.js 14](https://nextjs.org/)
 - [TypeScript](https://www.typescriptlang.org/)
 - [Tailwind CSS](https://tailwindcss.com/)

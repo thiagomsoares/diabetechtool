@@ -6,3 +6,7 @@ node_modules
 
 # Next.js
 .next/
+
+# Bun
+bun.lockb
+.env
