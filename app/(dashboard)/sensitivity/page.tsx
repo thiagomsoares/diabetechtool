@@ -20,6 +20,8 @@ export default function SensitivityPage() {
 
   const { data, loading, error, fetchData } = useNightscoutData();
 
+  const [selectedPeriod, setSelectedPeriod] = useState(3);
+
   useEffect(() => {
     const end = new Date();
     const start = new Date();
@@ -89,6 +91,7 @@ export default function SensitivityPage() {
   const stats = calculateStats();
 
   const handlePeriodSelect = (days: number) => {
+    setSelectedPeriod(days);
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - days);
@@ -106,7 +109,10 @@ export default function SensitivityPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-4">Análise de Sensibilidade</h2>
-        <QuickDateButtons onSelect={handlePeriodSelect} selectedDays={3} />
+        <QuickDateButtons 
+          onSelect={handlePeriodSelect} 
+          selectedDays={selectedPeriod} 
+        />
         <DateRangePicker
           startDate={dateRange.startDate}
           endDate={dateRange.endDate}

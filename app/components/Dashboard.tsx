@@ -27,6 +27,8 @@ export const Dashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const { data, loading, error: dataError, fetchData, isConfigured, loadingStats } = useNightscoutData();
 
+  const [selectedPeriod, setSelectedPeriod] = useState(3);
+
   useEffect(() => {
     if (!isConfigured) {
       router.push('/');
@@ -159,6 +161,7 @@ export const Dashboard = () => {
   };
 
   const handlePeriodSelect = (days: number) => {
+    setSelectedPeriod(days);
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - days);
@@ -177,7 +180,10 @@ export const Dashboard = () => {
             {nightscoutUrl && `Conectado a: ${nightscoutUrl}`}
           </p>
           <div className="mt-4">
-            <QuickDateButtons onSelect={handlePeriodSelect} selectedDays={3} />
+            <QuickDateButtons 
+              onSelect={handlePeriodSelect} 
+              selectedDays={selectedPeriod} 
+            />
             <DateRangePicker
               startDate={dateRange.startDate}
               endDate={dateRange.endDate}
