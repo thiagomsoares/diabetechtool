@@ -187,7 +187,7 @@ export default function TimeInRangePage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-4">Tempo no Alvo</h2>
-        <QuickDateButtons onSelect={handlePeriodSelect} />
+        <QuickDateButtons onSelect={handlePeriodSelect} selectedDays={3} />
         <DateRangePicker
           startDate={dateRange.startDate}
           endDate={dateRange.endDate}

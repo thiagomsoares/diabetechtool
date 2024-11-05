@@ -177,7 +177,7 @@ export const Dashboard = () => {
             {nightscoutUrl && `Conectado a: ${nightscoutUrl}`}
           </p>
           <div className="mt-4">
-            <QuickDateButtons onSelect={handlePeriodSelect} />
+            <QuickDateButtons onSelect={handlePeriodSelect} selectedDays={3} />
             <DateRangePicker
               startDate={dateRange.startDate}
               endDate={dateRange.endDate}
