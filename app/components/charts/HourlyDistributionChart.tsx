@@ -4,6 +4,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { Layout, Config, Data } from 'plotly.js';
 import { useApp } from '@/app/contexts/AppContext';
+import { useTimezone } from '@/app/hooks/useTimezone';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -17,6 +18,7 @@ interface HourlyDistributionProps {
 export const HourlyDistributionChart = ({ data }: HourlyDistributionProps) => {
   const { settings } = useApp();
   const { glucoseRange } = settings;
+  const { timezone } = useTimezone();
 
   const calculateDistribution = (values: number[]) => {
     const total = values.length;
@@ -107,6 +109,9 @@ export const HourlyDistributionChart = ({ data }: HourlyDistributionProps) => {
         config={config}
         className="w-full"
       />
+      <div className="text-sm text-gray-500 mt-2">
+        Horários exibidos no fuso: {timezone}
+      </div>
     </div>
   );
 }; 

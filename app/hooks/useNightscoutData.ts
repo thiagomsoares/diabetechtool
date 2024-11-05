@@ -14,6 +14,7 @@ import {
   NightscoutProfile,
   ProfileStore
 } from '@/app/types/nightscout';
+import { useTimezone } from './useTimezone';
 
 interface HourlyData {
   hour: number;
@@ -51,7 +52,7 @@ export const useNightscoutData = () => {
   const [data, setData] = useState<ProcessedData | null>(null);
   const [isConfigured, setIsConfigured] = useState<boolean>(false);
   const [loadingStats, setLoadingStats] = useState<LoadingStats | null>(null);
-  const [timezone, setTimezone] = useState<string>('UTC');
+  const { timezone, convertToUserTime, convertToUTC } = useTimezone();
 
   useEffect(() => {
     const config = localStorage.getItem('nightscout_config') || Cookies.get('nightscout_config');
@@ -238,41 +239,6 @@ export const useNightscoutData = () => {
     processedData.hourlyStats = processHourlyData(processedData);
 
     return processedData;
-  };
-
-  const fetchTimezone = async () => {
-    try {
-      const savedConfig = getConfig();
-      const { baseUrl, apiSecret } = savedConfig;
-      const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-      
-      const profileResponse = await fetch('/api/nightscout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: `${cleanBaseUrl}/api/v1/profile`,
-          apiSecret
-        }),
-      });
-
-      if (profileResponse.ok) {
-        const profiles = await profileResponse.json();
-        if (profiles && profiles.length > 0) {
-          const activeProfile = profiles[0];
-          const profileTimezone = activeProfile.store[activeProfile.defaultProfile]?.timezone;
-          if (profileTimezone) {
-            setTimezone(profileTimezone);
-            return profileTimezone;
-          }
-        }
-      }
-      return 'UTC'; // Fallback para UTC se não encontrar o fuso horário
-    } catch (error) {
-      console.error('Erro ao buscar fuso horário:', error);
-      return 'UTC';
-    }
   };
 
   const fetchData = async (dateRange: DateRange) => {
