@@ -1,0 +1,9 @@
+[install]
+exact = true
+production = false
+
+[install.scopes]
+next = "workspace:*"
+
+[runtime]
+env = { NODE_ENV = "development" } 
