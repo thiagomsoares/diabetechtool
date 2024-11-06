@@ -21,9 +21,11 @@ interface LineChartProps {
     series1Name: string;    // Nome da série primária
     series2Name: string;    // Nome da série secundária
   };
+  showTargetRange?: boolean;  // Novo prop para controlar exibição das faixas alvo
+  height?: number;  // Nova prop para controlar a altura
 }
 
-export const LineChart = ({ data }: LineChartProps) => {
+export const LineChart = ({ data, showTargetRange = true, height = 400 }: LineChartProps) => {
   const { timezone } = useTimezone();
   const { settings } = useApp();
 
@@ -31,18 +33,21 @@ export const LineChart = ({ data }: LineChartProps) => {
    * Calcula o range dinâmico do eixo Y baseado nos valores
    * Arredonda para a dezena mais próxima e mantém um mínimo de 40
    */
-  const calculateDynamicRange = (values: number[]) => {
-    if (!values.length) return [0, 400];
+  const calculateDynamicRange = (values: number[], values2: number[] = []) => {
+    if (!values.length && !values2.length) return [0, 400];
     
-    const minValue = Math.min(...values);
-    const maxValue = Math.max(...values);
+    // Combina todos os valores para encontrar min e max
+    const allValues = [...values, ...values2];
+    const minValue = Math.min(...allValues);
+    const maxValue = Math.max(...allValues);
     
+    // Arredonda para a dezena mais próxima
     const floorTo10 = (num: number) => Math.floor(num / 10) * 10;
-    const ceilTo10 = (num: number) => Math.ceil(num / 10) * 10;
+    const ceilTo10 = (num: number) => Math.ceil((num + 10) / 10) * 10;
     
     return [
-      Math.max(40, floorTo10(minValue)),  // Não permite valores menores que 40
-      ceilTo10(maxValue)                  // Arredonda para cima para a próxima dezena
+      Math.max(40, floorTo10(minValue - 10)),  // Subtrai 10 antes de arredondar para baixo
+      ceilTo10(maxValue + 10)                  // Adiciona 10 antes de arredondar para cima
     ];
   };
 
@@ -135,19 +140,35 @@ export const LineChart = ({ data }: LineChartProps) => {
   };
 
   const sortedData = groupDataByDay();
-  const yAxisRange = calculateDynamicRange(data.values1);
+  const yAxisRange = calculateDynamicRange(data.values1, data.values2);
   const timeRange = calculateTimeRange(sortedData);
 
-  // Cria uma série para cada dia, permitindo sobreposição no gráfico
-  const plotData = sortedData.map((dayData) => ({
-    x: dayData.timestamps,
-    y: dayData.values,
-    type: 'scatter' as const,
-    mode: 'lines+markers' as const,
-    name: dayData.date,
-    line: { width: 2 },
-    connectgaps: true  // Conecta pontos mesmo com gaps nos dados
-  }));
+  // Cria uma série para cada dia e adiciona a linha de referência se necessário
+  const plotData = [
+    // Dados diários
+    ...sortedData.map((dayData) => ({
+      x: dayData.timestamps,
+      y: dayData.values,
+      type: 'scatter' as const,
+      mode: 'lines+markers' as const,
+      name: dayData.date,
+      line: { width: 2 },
+      connectgaps: true
+    })),
+    // Linha de referência (ISF do perfil)
+    ...(data.values2.length > 0 ? [{
+      x: data.timestamps,
+      y: data.values2,
+      type: 'scatter' as const,
+      mode: 'lines' as const,
+      name: data.series2Name,
+      line: { 
+        width: 2,
+        dash: 'dot' as const,
+        color: '#9333ea'
+      }
+    }] : [])
+  ];
 
   // Configuração do layout do gráfico
   const layout: Partial<Layout> = {
@@ -156,7 +177,10 @@ export const LineChart = ({ data }: LineChartProps) => {
       title: data.yaxis,
       range: yAxisRange,
       gridcolor: '#f0f0f0',
-      fixedrange: false
+      fixedrange: false,
+      tickmode: 'linear',
+      dtick: 10,  // Força ticks a cada 10 unidades
+      tickformat: 'd'  // Força números inteiros
     },
     xaxis: {
       title: 'Horário',
@@ -191,12 +215,12 @@ export const LineChart = ({ data }: LineChartProps) => {
       l: 50, 
       b: 40 
     },
-    height: 400,
+    height,  // Usa a altura passada por prop
     plot_bgcolor: 'white',
     paper_bgcolor: 'white',
     hovermode: 'x unified',  // Mostra todos os valores do mesmo horário
     // Linhas de referência para o range alvo
-    shapes: [
+    shapes: showTargetRange ? [
       {
         type: 'line',
         x0: timeRange.start,
@@ -221,7 +245,7 @@ export const LineChart = ({ data }: LineChartProps) => {
           dash: 'dash'
         }
       }
-    ]
+    ] : []  // Se showTargetRange for false, não mostra as linhas de alvo
   };
 
   // Configurações de interatividade do gráfico

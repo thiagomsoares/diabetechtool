@@ -320,6 +320,9 @@ export const useNightscoutData = () => {
 
         if (devicestatusResponse.ok) {
           const devicestatus = await devicestatusResponse.json();
+          
+          // Adicionar log para debug da chamada do perfil
+          console.log('Buscando perfis...');
           const profileResponse = await fetch('/api/nightscout', {
             method: 'POST',
             headers: {
@@ -331,22 +334,26 @@ export const useNightscoutData = () => {
             }),
           });
 
+          console.log('Resposta do perfil:', {
+            ok: profileResponse.ok,
+            status: profileResponse.status
+          });
+
           if (profileResponse.ok) {
             const profiles = await profileResponse.json();
+            console.log('Perfis carregados:', profiles.length);
             const processedWithSensitivity = processData(devicestatus, profiles);
             setData({
               ...processedData,
               ...processedWithSensitivity
             });
           } else {
+            console.error('Erro ao carregar perfis:', await profileResponse.text());
             setData(processedData);
           }
-        } else {
-          setData(processedData);
         }
       } catch (err) {
-        console.log('Erro ao buscar dados de sensibilidade:', err);
-        setData(processedData);
+        console.error('Erro detalhado:', err);
       }
 
     } catch (err) {

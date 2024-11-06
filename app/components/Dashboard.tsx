@@ -133,14 +133,48 @@ export const Dashboard = () => {
     };
   }, [loadingStepTimer]);
 
-  const calculateAverage = (values: number[]) => {
+  /**
+   * Calcula a média dos valores
+   */
+  const calculateAverage = (values: number[]): number => {
     if (!values || values.length === 0) return 0;
     return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
   };
 
-  const calculateAverageISF = (values: number[]) => {
+  /**
+   * Calcula o desvio padrão dos valores
+   */
+  const calculateStandardDeviation = (values: number[]): number => {
     if (!values || values.length === 0) return 0;
-    return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+    const mean = calculateAverage(values);
+    const squareDiffs = values.map(value => Math.pow(value - mean, 2));
+    const avgSquareDiff = calculateAverage(squareDiffs);
+    return Math.round(Math.sqrt(avgSquareDiff));
+  };
+
+  /**
+   * Calcula todas as estatísticas necessárias
+   */
+  const calculateStats = (data: any) => {
+    if (!data?.bgs || data.bgs.length === 0) return {
+      mean: 'NaN',
+      min: 'NaN',
+      max: 'NaN',
+      std: 'NaN'
+    };
+
+    const values = data.bgs;
+    const mean = calculateAverage(values);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const std = calculateStandardDeviation(values);
+
+    return {
+      mean,
+      min,
+      max,
+      std
+    };
   };
 
   const renderAlternativeView = () => {
@@ -210,13 +244,6 @@ export const Dashboard = () => {
         </div>
       </div>
     );
-  };
-
-  const calculateStandardDeviation = (values: number[]) => {
-    const mean = calculateAverage(values);
-    const squareDiffs = values.map(value => Math.pow(value - mean, 2));
-    const avgSquareDiff = calculateAverage(squareDiffs);
-    return Math.round(Math.sqrt(avgSquareDiff));
   };
 
   const handlePeriodSelect = (days: number) => {
@@ -316,6 +343,41 @@ export const Dashboard = () => {
                 </div>
               )}
 
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {/* Cards de estatísticas */}
+                {(() => {
+                  const stats = calculateStats(data);
+                  return (
+                    <>
+                      <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                        <dt className="truncate text-sm font-medium text-gray-500">Média Glicemia</dt>
+                        <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+                          {stats.mean} mg/dL
+                        </dd>
+                      </div>
+                      <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                        <dt className="truncate text-sm font-medium text-gray-500">Glicemia Mínima</dt>
+                        <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+                          {stats.min} mg/dL
+                        </dd>
+                      </div>
+                      <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                        <dt className="truncate text-sm font-medium text-gray-500">Glicemia Máxima</dt>
+                        <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+                          {stats.max} mg/dL
+                        </dd>
+                      </div>
+                      <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                        <dt className="truncate text-sm font-medium text-gray-500">Desvio Padrão</dt>
+                        <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+                          {stats.std} mg/dL
+                        </dd>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+
               {data.timestamps.length > 0 && data.bgs.length > 0 && (
                 <div className="rounded-lg bg-white shadow">
                   <div className="p-6">
@@ -330,6 +392,7 @@ export const Dashboard = () => {
                         series1Name: 'Glicemia',
                         series2Name: ''
                       }}
+                      height={400}
                     />
                   </div>
                 </div>
@@ -345,10 +408,12 @@ export const Dashboard = () => {
                         values1: data.isfDynamic,
                         values2: data.isfProfile,
                         title: '',
-                        yaxis: 'ISF',
+                        yaxis: 'ISF (mg/dL/U)',
                         series1Name: 'ISF Dinâmico',
                         series2Name: 'ISF Perfil'
                       }}
+                      showTargetRange={false}
+                      height={300}
                     />
                   </div>
                 </div>
