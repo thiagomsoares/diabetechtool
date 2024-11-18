@@ -13,263 +13,164 @@ const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 interface LineChartProps {
   data: {
-    timestamps: string[];    // Array de timestamps em ISO string
-    values1: number[];      // Valores primários (ex: glicemia)
-    values2: number[];      // Valores secundários (opcional, ex: ISF)
-    title: string;          // Título do gráfico
-    yaxis: string;          // Label do eixo Y
-    series1Name: string;    // Nome da série primária
-    series2Name: string;    // Nome da série secundária
+    timestamps: string[];      // Array de timestamps para a primeira série
+    timestamps1?: string[];    // Array de timestamps específico para values1 (opcional)
+    timestamps2?: string[];    // Array de timestamps específico para values2 (opcional)
+    values1: number[];        // Valores primários (ex: glicemia)
+    values2?: number[];       // Valores secundários (opcional, ex: ISF)
+    title: string;           // Título do gráfico
+    yaxis: string;           // Label do eixo Y
+    series1Name: string;     // Nome da série primária
+    series2Name?: string;    // Nome da série secundária (opcional)
   };
-  showTargetRange?: boolean;  // Novo prop para controlar exibição das faixas alvo
-  height?: number;  // Nova prop para controlar a altura
+  showTargetRange?: boolean;  // Prop para controlar exibição das faixas alvo
+  height?: number;           // Prop para controlar a altura
 }
 
-export const LineChart = ({ data, showTargetRange = true, height = 400 }: LineChartProps) => {
+export const LineChart = ({ 
+  data,
+  showTargetRange = true, 
+  height = 400 
+}: LineChartProps) => {
   const { timezone } = useTimezone();
   const { settings } = useApp();
 
+  // Verifica se os dados são válidos
+  if (!data || !Array.isArray(data.values1)) {
+    console.error('Dados inválidos para o gráfico:', data);
+    return <div className="p-4 text-center text-gray-500">Dados não disponíveis</div>;
+  }
+
+  // Verifica se há dados para plotar
+  if (data.values1.length === 0) {
+    return <div className="p-4 text-center text-gray-500">Nenhum dado disponível para o período selecionado</div>;
+  }
+
   /**
    * Calcula o range dinâmico do eixo Y baseado nos valores
-   * Arredonda para a dezena mais próxima e mantém um mínimo de 40
    */
   const calculateDynamicRange = (values: number[], values2: number[] = []) => {
-    if (!values.length && !values2.length) return [0, 400];
+    const allValues = [...values, ...(values2 || [])].filter(v => typeof v === 'number' && !isNaN(v));
+    if (!allValues.length) return [0, 400];
     
-    // Combina todos os valores para encontrar min e max
-    const allValues = [...values, ...values2];
     const minValue = Math.min(...allValues);
     const maxValue = Math.max(...allValues);
     
-    // Arredonda para a dezena mais próxima
-    const floorTo10 = (num: number) => Math.floor(num / 10) * 10;
-    const ceilTo10 = (num: number) => Math.ceil((num + 10) / 10) * 10;
-    
+    // Adiciona margem de 10% acima e abaixo
+    const margin = (maxValue - minValue) * 0.1;
     return [
-      Math.max(40, floorTo10(minValue - 10)),  // Subtrai 10 antes de arredondar para baixo
-      ceilTo10(maxValue + 10)                  // Adiciona 10 antes de arredondar para cima
+      Math.max(0, Math.floor(minValue - margin)),
+      Math.ceil(maxValue + margin)
     ];
   };
 
-  /**
-   * Normaliza todos os timestamps para um mesmo dia de referência (01/01/2000)
-   * Isso permite sobrepor os dados de diferentes dias no mesmo período de 24h
-   */
-  const normalizeToSameDay = (timestamp: string) => {
-    const date = parseISO(timestamp);
-    const normalized = setYear(setMonth(setDate(date, 1), 0), 2000);
-    return normalized.toISOString();
-  };
-
-  /**
-   * Agrupa os dados por dia, considerando o timezone do usuário
-   * Cada dia terá seus próprios timestamps e valores, normalizados para sobreposição
-   */
-  const groupDataByDay = () => {
-    const groupedData: { [key: string]: { timestamps: string[]; values: number[] } } = {};
-
-    data.timestamps.forEach((timestamp, index) => {
-      // Agrupa usando a data local do usuário, não UTC
-      const date = formatInTimeZone(parseISO(timestamp), timezone, 'yyyy-MM-dd');
-      if (!groupedData[date]) {
-        groupedData[date] = {
-          timestamps: [],
-          values: []
-        };
-      }
-      // Normaliza o timestamp para sobrepor no gráfico
-      const normalizedTimestamp = normalizeToSameDay(timestamp);
-      groupedData[date].timestamps.push(normalizedTimestamp);
-      groupedData[date].values.push(data.values1[index]);
-    });
-
-    // Ordena os timestamps dentro de cada dia para garantir a continuidade das linhas
-    Object.keys(groupedData).forEach(date => {
-      const indices = groupedData[date].timestamps
-        .map((_, i) => i)
-        .sort((a, b) => new Date(groupedData[date].timestamps[a]).getTime() - 
-                        new Date(groupedData[date].timestamps[b]).getTime());
-      
-      groupedData[date].timestamps = indices.map(i => groupedData[date].timestamps[i]);
-      groupedData[date].values = indices.map(i => groupedData[date].values[i]);
-    });
-
-    // Retorna array com dados agrupados e formatados
-    return Object.entries(groupedData).map(([date, dayData]) => ({
-      date: formatInTimeZone(parseISO(date), timezone, 'dd/MM/yyyy'),
-      ...dayData
-    }));
-  };
-
-  /**
-   * Calcula o range efetivo dos dados para o eixo X
-   * Retorna o primeiro e último horário onde existem dados
-   * Adiciona uma margem de 30 minutos antes e depois para melhor visualização
-   */
-  const calculateTimeRange = (sortedData: ReturnType<typeof groupDataByDay>) => {
-    let minTime = '23:59';
-    let maxTime = '00:00';
-
-    sortedData.forEach(dayData => {
-      dayData.timestamps.forEach(timestamp => {
-        const time = formatInTimeZone(parseISO(timestamp), timezone, 'HH:mm');
-        if (time < minTime) minTime = time;
-        if (time > maxTime) maxTime = time;
-      });
-    });
-
-    // Converte os horários para objetos Date para poder adicionar/subtrair minutos
-    const startDate = new Date(2000, 0, 1, 
-      parseInt(minTime.split(':')[0]), 
-      parseInt(minTime.split(':')[1])
-    );
-    const endDate = new Date(2000, 0, 1, 
-      parseInt(maxTime.split(':')[0]), 
-      parseInt(maxTime.split(':')[1])
-    );
-
-    // Subtrai 30 minutos do início e adiciona 30 minutos ao fim
-    startDate.setMinutes(startDate.getMinutes() - 30);
-    endDate.setMinutes(endDate.getMinutes() + 30);
-
-    // Formata de volta para string
-    return {
-      start: startDate.toISOString(),
-      end: endDate.toISOString()
-    };
-  };
-
-  const sortedData = groupDataByDay();
-  const yAxisRange = calculateDynamicRange(data.values1, data.values2);
-  const timeRange = calculateTimeRange(sortedData);
-
-  // Cria uma série para cada dia e adiciona a linha de referência se necessário
-  const plotData = [
-    // Dados diários
-    ...sortedData.map((dayData) => ({
-      x: dayData.timestamps,
-      y: dayData.values,
-      type: 'scatter' as const,
-      mode: 'lines+markers' as const,
-      name: dayData.date,
-      line: { width: 2 },
-      connectgaps: true
-    })),
-    // Linha de referência (ISF do perfil)
-    ...(data.values2.length > 0 ? [{
-      x: data.timestamps,
-      y: data.values2,
-      type: 'scatter' as const,
-      mode: 'lines' as const,
-      name: data.series2Name,
-      line: { 
-        width: 2,
-        dash: 'dot' as const,
-        color: '#9333ea'
-      }
-    }] : [])
-  ];
-
-  // Configuração do layout do gráfico
+  // Configuração do layout
   const layout: Partial<Layout> = {
-    title: data.title,
-    yaxis: { 
-      title: data.yaxis,
-      range: yAxisRange,
-      gridcolor: '#f0f0f0',
-      fixedrange: false,
-      tickmode: 'linear',
-      dtick: 10,  // Força ticks a cada 10 unidades
-      tickformat: 'd'  // Força números inteiros
-    },
+    height: height,
+    margin: { t: 20, r: 20, b: 40, l: 50 },
     xaxis: {
       title: 'Horário',
+      type: 'date',
       tickformat: '%H:%M',
+      showgrid: true,
       gridcolor: '#f0f0f0',
-      range: [timeRange.start, timeRange.end],
-      tickmode: 'array',
-      ticktext: Array.from({ length: 24 }, (_, i) => 
-        formatInTimeZone(
-          new Date(2000, 0, 1, i, 0), 
-          timezone, 
-          'HH:mm'
-        )
-      ),
-      tickvals: Array.from({ length: 24 }, (_, i) => 
-        new Date(2000, 0, 1, i, 0).toISOString()
-      ),
-      fixedrange: false
+      tickformatStops: [{
+        dtickrange: [null, null],
+        value: '%H:%M'
+      }],
+      hoverformat: '%H:%M',
+    },
+    yaxis: {
+      title: data.yaxis,
+      range: calculateDynamicRange(data.values1, data.values2),
+      showgrid: true,
+      gridcolor: '#f0f0f0',
+      zeroline: false,
     },
     showlegend: true,
-    legend: { 
-      x: 1.1,
-      y: 1,
-      xanchor: 'left',
-      bgcolor: 'rgba(255, 255, 255, 0.8)',
-      bordercolor: '#E2E8F0',
-      borderwidth: 1
+    legend: {
+      x: 0,
+      y: 1.1,
+      orientation: 'h'
     },
-    margin: { 
-      t: 60, 
-      r: 150,  // Margem maior à direita para a legenda
-      l: 50, 
-      b: 40 
-    },
-    height,  // Usa a altura passada por prop
     plot_bgcolor: 'white',
     paper_bgcolor: 'white',
-    hovermode: 'x unified',  // Mostra todos os valores do mesmo horário
-    // Linhas de referência para o range alvo
-    shapes: showTargetRange ? [
-      {
-        type: 'line',
-        x0: timeRange.start,
-        x1: timeRange.end,
-        y0: settings.glucoseRange.min,
-        y1: settings.glucoseRange.min,
-        line: {
-          color: 'red',
-          width: 1,
-          dash: 'dash'
-        }
-      },
-      {
-        type: 'line',
-        x0: timeRange.start,
-        x1: timeRange.end,
-        y0: settings.glucoseRange.max,
-        y1: settings.glucoseRange.max,
-        line: {
-          color: 'red',
-          width: 1,
-          dash: 'dash'
-        }
-      }
-    ] : []  // Se showTargetRange for false, não mostra as linhas de alvo
   };
 
-  // Configurações de interatividade do gráfico
+  // Configuração do gráfico
   const config: Partial<Config> = {
-    responsive: true,
-    displayModeBar: true,
-    modeBarButtonsToRemove: ['lasso2d', 'select2d'],
-    displaylogo: false,
-    scrollZoom: true,
-    doubleClick: 'reset'
+    displayModeBar: false,
+    responsive: true
   };
+
+  // Prepara os dados para o gráfico
+  const plotData = [
+    {
+      x: data.timestamps1 || data.timestamps,
+      y: data.values1,
+      type: 'scatter',
+      mode: 'lines',
+      name: data.series1Name,
+      line: { color: '#3B82F6', width: 2 },
+      hovertemplate: `%{y:.1f} ${data.yaxis}<br>%{x|%H:%M}<extra></extra>`,
+    }
+  ];
+
+  // Adiciona a segunda série se existir
+  if (data.values2 && data.values2.length > 0 && data.series2Name) {
+    plotData.push({
+      x: data.timestamps2 || data.timestamps,
+      y: data.values2,
+      type: 'scatter',
+      mode: 'lines',
+      name: data.series2Name,
+      line: { color: '#10B981', width: 2 },
+      hovertemplate: `%{y:.1f} ${data.yaxis}<br>%{x|%H:%M}<extra></extra>`,
+    });
+  }
+
+  // Adiciona as faixas alvo se necessário
+  if (showTargetRange && settings.glucoseRange) {
+    const { min, max } = settings.glucoseRange;
+    // Adiciona área sombreada para a faixa alvo
+    plotData.push({
+      x: [...data.timestamps, ...data.timestamps.slice().reverse()],
+      y: [...Array(data.timestamps.length).fill(max), ...Array(data.timestamps.length).fill(min)].reverse(),
+      fill: 'toself',
+      fillcolor: 'rgba(147, 197, 253, 0.2)', // Azul claro com transparência
+      line: { width: 0 },
+      name: `Faixa Alvo (${min}-${max})`,
+      showlegend: true,
+      hoverinfo: 'skip'
+    });
+
+    // Linhas tracejadas nos limites
+    plotData.push({
+      x: data.timestamps,
+      y: Array(data.timestamps.length).fill(min),
+      mode: 'lines',
+      name: 'Limite Inferior',
+      line: { color: '#93C5FD', width: 1, dash: 'dash' },
+      showlegend: false,
+      hoverinfo: 'skip'
+    });
+    plotData.push({
+      x: data.timestamps,
+      y: Array(data.timestamps.length).fill(max),
+      mode: 'lines',
+      name: 'Limite Superior',
+      line: { color: '#93C5FD', width: 1, dash: 'dash' },
+      showlegend: false,
+      hoverinfo: 'skip'
+    });
+  }
 
   return (
-    <div className="relative">
-      <Plot
-        data={plotData}
-        layout={layout}
-        config={config}
-        className="w-full h-full"
-        onError={(err) => console.error('Plotly error:', err)}
-      />
-      <div className="text-sm text-gray-500 mt-2">
-        Horários exibidos no fuso: {timezone}
-      </div>
-    </div>
+    <Plot
+      data={plotData}
+      layout={layout}
+      config={config}
+      className="w-full"
+    />
   );
 };
