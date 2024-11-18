@@ -12,6 +12,8 @@ import { HourlyDistributionChart } from '@/app/components/charts/HourlyDistribut
 import { QuickDateButtons } from '@/app/components';
 import type { QuickDateButtonsProps } from '@/app/types/components';
 import { useApp } from '@/app/contexts/AppContext';
+import { useLoadingState } from '@/app/hooks/useLoadingState';
+import { LoadingSteps } from '@/app/components/LoadingSteps';
 
 export default function TimeInRangePage() {
   const { settings } = useApp();
@@ -21,6 +23,7 @@ export default function TimeInRangePage() {
   });
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { data, loading, error, fetchData } = useNightscoutData();
+  const { isSearching, currentLoadingStep, motivationalPhrase, LOADING_STEPS } = useLoadingState(loading);
   const [selectedPeriod, setSelectedPeriod] = useState(3);
 
   useEffect(() => {
@@ -175,29 +178,50 @@ export default function TimeInRangePage() {
   const stats = calculateStats();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Tempo no Alvo</h2>
-        <QuickDateButtons 
-          onSelect={handlePeriodSelect} 
-          selectedDays={selectedPeriod} 
-        />
-        <DateRangePicker
-          startDate={dateRange.startDate}
-          endDate={dateRange.endDate}
-          onChange={handleDateChange}
-          onSearch={() => fetchData(dateRange)}
-          isLoading={loading}
-        />
-      </div>
+    <div className="container mx-auto px-4 py-8">
+      <LoadingSteps
+        isSearching={isSearching}
+        currentLoadingStep={currentLoadingStep}
+        motivationalPhrase={motivationalPhrase}
+        loadingSteps={LOADING_STEPS}
+      />
 
-      {loading && (
-        <Transition>
-          <div className="flex justify-center">
-            <LoadingSpinner size="lg" message="Carregando dados..." />
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold mb-4">Tempo no Alvo</h1>
+        
+        <div className="space-y-4">
+          <QuickDateButtons 
+            onSelect={handlePeriodSelect} 
+            selectedDays={selectedPeriod} 
+          />
+          
+          <DateRangePicker
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            onDateChange={handleDateChange}
+            onSearch={() => fetchData(dateRange)}
+            isLoading={loading}
+          />
+
+          <div className="flex items-center justify-center space-x-4 mt-4">
+            <button
+              onClick={goToPreviousDay}
+              className="p-2 hover:bg-gray-100 rounded-full"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <span className="text-lg font-medium">
+              {format(selectedDate, 'dd/MM/yyyy')}
+            </span>
+            <button
+              onClick={goToNextDay}
+              className="p-2 hover:bg-gray-100 rounded-full"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
           </div>
-        </Transition>
-      )}
+        </div>
+      </div>
 
       {error && (
         <Transition>
@@ -208,104 +232,83 @@ export default function TimeInRangePage() {
         </Transition>
       )}
 
-      {data && !loading && stats && (
-        <Transition>
-          <div className="space-y-6">
-            {/* Estatísticas em Destaque */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow p-6 text-white">
-                <h3 className="text-lg font-medium mb-2">HbA1c Estimada</h3>
-                <p className="text-3xl font-bold">
-                  {((stats.mean + 46.7) / 28.7).toFixed(1)}%
-                </p>
-                <p className="text-sm opacity-75 mt-1">Baseada na média glicêmica</p>
-              </div>
-
-              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow p-6 text-white">
-                <h3 className="text-lg font-medium mb-2">GMI</h3>
-                <p className="text-3xl font-bold">
-                  {(3.31 + (0.02392 * stats.mean)).toFixed(1)}%
-                </p>
-                <p className="text-sm opacity-75 mt-1">Glucose Management Indicator</p>
-              </div>
-
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow p-6 text-white">
-                <h3 className="text-lg font-medium mb-2">Coeficiente de Variação</h3>
-                <p className="text-3xl font-bold">{stats.cv}%</p>
-                <p className="text-sm opacity-75 mt-1">Meta: {'<'} 36%</p>
-              </div>
-
-              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow p-6 text-white">
-                <h3 className="text-lg font-medium mb-2">Desvio Padrão</h3>
-                <p className="text-3xl font-bold">{stats.std} mg/dL</p>
-                <p className="text-sm opacity-75 mt-1">Variabilidade glicêmica</p>
-              </div>
+      {data && !error && (
+        <div className="grid grid-cols-1 gap-6">
+          {/* Estatísticas em Destaque */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow p-6 text-white">
+              <h3 className="text-lg font-medium mb-2">HbA1c Estimada</h3>
+              <p className="text-3xl font-bold">
+                {((stats.mean + 46.7) / 28.7).toFixed(1)}%
+              </p>
+              <p className="text-sm opacity-75 mt-1">Baseada na média glicêmica</p>
             </div>
 
-            {/* Distribuição por Hora do Dia */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium">Distribuição por Hora do Dia</h3>
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={goToPreviousDay}
-                    disabled={selectedDate <= dateRange.startDate}
-                    className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <div className="text-sm font-medium">
-                    {format(selectedDate, 'dd/MM/yyyy')}
-                  </div>
-                  <button
-                    onClick={goToNextDay}
-                    disabled={selectedDate >= dateRange.endDate}
-                    className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
+            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow p-6 text-white">
+              <h3 className="text-lg font-medium mb-2">GMI</h3>
+              <p className="text-3xl font-bold">
+                {(3.31 + (0.02392 * stats.mean)).toFixed(1)}%
+              </p>
+              <p className="text-sm opacity-75 mt-1">Glucose Management Indicator</p>
+            </div>
 
-              {data.bgs.length > 0 ? (
-                <HourlyDistributionChart data={processSelectedDayData()} />
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  Sem dados disponíveis para este dia
-                </div>
-              )}
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow p-6 text-white">
+              <h3 className="text-lg font-medium mb-2">Coeficiente de Variação</h3>
+              <p className="text-3xl font-bold">{stats.cv}%</p>
+              <p className="text-sm opacity-75 mt-1">Meta: {'<'} 36%</p>
+            </div>
 
-              {/* Resumo do Dia */}
-              {data.bgs.length > 0 && (
-                <div className="mt-4 grid grid-cols-3 gap-4">
-                  {data && data.bgs && data.timestamps && (
-                    <>
-                      <div className="bg-red-50 p-4 rounded-lg">
-                        <dt className="text-sm font-medium text-red-800">Hipoglicemia</dt>
-                        <dd className="mt-1 text-2xl font-semibold text-red-900">
-                          {calculateDayStats(data.bgs, data.timestamps, selectedDate).hypo}%
-                        </dd>
-                      </div>
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <dt className="text-sm font-medium text-green-800">No Alvo</dt>
-                        <dd className="mt-1 text-2xl font-semibold text-green-900">
-                          {calculateDayStats(data.bgs, data.timestamps, selectedDate).inRange}%
-                        </dd>
-                      </div>
-                      <div className="bg-yellow-50 p-4 rounded-lg">
-                        <dt className="text-sm font-medium text-yellow-800">Hiperglicemia</dt>
-                        <dd className="mt-1 text-2xl font-semibold text-yellow-900">
-                          {calculateDayStats(data.bgs, data.timestamps, selectedDate).hyper}%
-                        </dd>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow p-6 text-white">
+              <h3 className="text-lg font-medium mb-2">Desvio Padrão</h3>
+              <p className="text-3xl font-bold">{stats.std} mg/dL</p>
+              <p className="text-sm opacity-75 mt-1">Variabilidade glicêmica</p>
             </div>
           </div>
-        </Transition>
+
+          {/* Distribuição por Hora do Dia */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium">Distribuição por Hora do Dia</h3>
+            </div>
+
+            {data.bgs.length > 0 ? (
+              <HourlyDistributionChart data={processSelectedDayData()} />
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                Sem dados disponíveis para este dia
+              </div>
+            )}
+
+            {/* Resumo do Dia */}
+            {data.bgs.length > 0 && (
+              <div className="mt-4 grid grid-cols-3 gap-4">
+                {data && data.bgs && data.timestamps && (
+                  <>
+                    <div className="bg-red-50 p-4 rounded-lg">
+                      <dt className="text-sm font-medium text-red-800">Hipoglicemia</dt>
+                      <dd className="mt-1 text-2xl font-semibold text-red-900">
+                        {calculateDayStats(data.bgs, data.timestamps, selectedDate).hypo}%
+                      </dd>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <dt className="text-sm font-medium text-green-800">No Alvo</dt>
+                      <dd className="mt-1 text-2xl font-semibold text-green-900">
+                        {calculateDayStats(data.bgs, data.timestamps, selectedDate).inRange}%
+                      </dd>
+                    </div>
+                    <div className="bg-yellow-50 p-4 rounded-lg">
+                      <dt className="text-sm font-medium text-yellow-800">Hiperglicemia</dt>
+                      <dd className="mt-1 text-2xl font-semibold text-yellow-900">
+                        {calculateDayStats(data.bgs, data.timestamps, selectedDate).hyper}%
+                      </dd>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
-} 
+}

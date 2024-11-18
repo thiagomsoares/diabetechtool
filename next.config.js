@@ -6,10 +6,15 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
-    optimizeFonts: true,
-    runtime: 'experimental-edge',
+    serverActions: {
+      bodySizeLimit: '2mb'
+    },
+    optimizeCss: true,
+    optimizePackageImports: ['lucide-react', '@heroicons/react', 'date-fns', 'framer-motion'],
   },
-  // Otimizações para Bun
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -18,6 +23,35 @@ const nextConfig = {
         module: false,
       };
     }
+    
+    // Otimizações do webpack
+    config.module = {
+      ...config.module,
+      exprContextCritical: false,
+    };
+
+    // Adiciona otimização de chunks
+    config.optimization = {
+      ...config.optimization,
+      splitChunks: {
+        chunks: 'all',
+        minSize: 20000,
+        maxSize: 70000,
+        cacheGroups: {
+          commons: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+          default: {
+            minChunks: 2,
+            priority: -20,
+            reuseExistingChunk: true,
+          },
+        },
+      },
+    };
+
     return config;
   },
   headers: async () => {

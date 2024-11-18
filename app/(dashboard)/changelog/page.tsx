@@ -1,7 +1,9 @@
 'use client'
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
+import { useLoadingState } from '@/app/hooks/useLoadingState';
+import { LoadingSteps } from '@/app/components/LoadingSteps';
 
 interface Release {
   version: string;
@@ -132,6 +134,9 @@ const releases: Release[] = [
 ];
 
 export default function ChangelogPage() {
+  const [loading, setLoading] = useState(false);
+  const { isSearching, currentLoadingStep, motivationalPhrase, LOADING_STEPS } = useLoadingState(loading);
+
   const getTypeColor = (type: Release['type']) => {
     switch (type) {
       case 'major':
@@ -176,42 +181,49 @@ export default function ChangelogPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Histórico de Atualizações</h2>
+    <div className="container mx-auto px-4 py-8">
+      <LoadingSteps
+        isSearching={isSearching}
+        currentLoadingStep={currentLoadingStep}
+        motivationalPhrase={motivationalPhrase}
+        loadingSteps={LOADING_STEPS}
+      />
+
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold mb-4">Histórico de Atualizações</h1>
         <p className="text-gray-600">
           Acompanhe as últimas alterações e melhorias no Diabetech.
         </p>
-      </div>
 
-      <div className="space-y-6">
-        {releases.map((release) => (
-          <Card key={release.version} className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <span>Versão {release.version}</span>
-                  <span className={`text-sm ${getTypeColor(release.type)}`}>
-                    ({release.type})
-                  </span>
-                </h3>
-                <p className="text-sm text-gray-500">{release.date}</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {release.changes.map((change, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <span className={`text-sm font-medium ${getChangeTypeColor(change.type)}`}>
-                    {getChangeTypeLabel(change.type)}:
-                  </span>
-                  <span className="text-gray-700">{change.description}</span>
+        <div className="space-y-6">
+          {releases.map((release) => (
+            <Card key={release.version} className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <span>Versão {release.version}</span>
+                    <span className={`text-sm ${getTypeColor(release.type)}`}>
+                      ({release.type})
+                    </span>
+                  </h3>
+                  <p className="text-sm text-gray-500">{release.date}</p>
                 </div>
-              ))}
-            </div>
-          </Card>
-        ))}
+              </div>
+
+              <div className="space-y-4">
+                {release.changes.map((change, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <span className={`text-sm font-medium ${getChangeTypeColor(change.type)}`}>
+                      {getChangeTypeLabel(change.type)}:
+                    </span>
+                    <span className="text-gray-700">{change.description}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );
-} 
+}

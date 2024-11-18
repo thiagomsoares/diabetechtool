@@ -7,11 +7,13 @@ interface GlucoseStatsProps {
   glucoseValues: number[];
 }
 
-export const GlucoseStats = ({ glucoseValues }: GlucoseStatsProps) => {
+export const GlucoseStats = ({ glucoseValues = [] }: GlucoseStatsProps) => {
   const { settings } = useApp();
-  const { glucoseRange } = settings;
+  const { glucoseRange } = settings || { glucoseRange: { min: 70, max: 180 } };
 
   const calculateStats = () => {
+    if (!Array.isArray(glucoseValues)) return { hypo: 0, inRange: 0, hyper: 0 };
+    
     const total = glucoseValues.length;
     if (total === 0) return { hypo: 0, inRange: 0, hyper: 0 };
 
@@ -61,4 +63,4 @@ export const GlucoseStats = ({ glucoseValues }: GlucoseStatsProps) => {
       </div>
     </div>
   );
-}; 
+};

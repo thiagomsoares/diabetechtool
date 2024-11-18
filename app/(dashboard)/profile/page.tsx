@@ -8,7 +8,9 @@ import { ptBR } from 'date-fns/locale';
 import { NightscoutProfile } from '@/app/types/nightscout';
 import dynamic from 'next/dynamic';
 import { Layout, Config, Data } from 'plotly.js';
-import { toZonedTime, formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone, zonedTimeToUtc } from 'date-fns-tz';
+import { useLoadingState } from '@/app/hooks/useLoadingState';
+import { LoadingSteps } from '@/app/components/LoadingSteps';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -18,6 +20,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
+  const { isSearching, currentLoadingStep, motivationalPhrase, LOADING_STEPS } = useLoadingState(loading);
 
   useEffect(() => {
     const fetchProfiles = async () => {
@@ -98,7 +101,7 @@ export default function ProfilePage() {
     if (!store) return null;
 
     const profileTimezone = store.timezone || 'UTC';
-    const createdAt = toZonedTime(new Date(profile.created_at), profileTimezone);
+    const createdAt = zonedTimeToUtc(new Date(profile.created_at), profileTimezone);
 
     return (
       <div className="space-y-8">
@@ -236,23 +239,33 @@ export default function ProfilePage() {
   const currentProfile = getCurrentProfile();
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Perfis do Nightscout</h2>
-        <select
-          value={selectedProfile || ''}
-          onChange={(e) => setSelectedProfile(e.target.value)}
-          className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        >
-          {profiles.map((profile) => (
-            <option key={profile._id} value={profile._id}>
-              {profile.defaultProfile} ({format(new Date(profile.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })})
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className="container mx-auto px-4 py-8">
+      <LoadingSteps
+        isSearching={isSearching}
+        currentLoadingStep={currentLoadingStep}
+        motivationalPhrase={motivationalPhrase}
+        loadingSteps={LOADING_STEPS}
+      />
 
-      {currentProfile && renderProfileData(currentProfile)}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold mb-4">Perfis do Nightscout</h1>
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">Perfis do Nightscout</h2>
+          <select
+            value={selectedProfile || ''}
+            onChange={(e) => setSelectedProfile(e.target.value)}
+            className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          >
+            {profiles.map((profile) => (
+              <option key={profile._id} value={profile._id}>
+                {profile.defaultProfile} ({format(new Date(profile.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {currentProfile && renderProfileData(currentProfile)}
+      </div>
     </div>
   );
-} 
+}

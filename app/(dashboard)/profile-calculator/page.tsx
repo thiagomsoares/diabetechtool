@@ -1,6 +1,9 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useLoadingState } from '@/app/hooks/useLoadingState';
+import { LoadingSteps } from '@/app/components/LoadingSteps';
 import { ProfileCalculations } from '@/app/utils/ProfileCalculations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -38,6 +41,10 @@ interface NightscoutProfile {
 }
 
 export default function ProfileCalculatorPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const { isSearching, currentLoadingStep, motivationalPhrase, LOADING_STEPS } = useLoadingState(loading);
+
   const [activeTab, setActiveTab] = useState('motol');
   const [results, setResults] = useState<ProfileResults | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -443,9 +450,16 @@ export default function ProfileCalculatorPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Calculadora de Perfil</h2>
+    <div className="container mx-auto px-4 py-8">
+      <LoadingSteps
+        isSearching={isSearching}
+        currentLoadingStep={currentLoadingStep}
+        motivationalPhrase={motivationalPhrase}
+        loadingSteps={LOADING_STEPS}
+      />
+
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold mb-4">Calculadora de Perfil</h1>
         <p className="text-gray-600">
           Calcule seu perfil basal usando os métodos Motol ou DPV.
         </p>
@@ -587,4 +601,4 @@ export default function ProfileCalculatorPage() {
       {renderProfileComparison()}
     </div>
   );
-} 
+}

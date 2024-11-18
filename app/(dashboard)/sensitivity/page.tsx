@@ -9,6 +9,8 @@ import { Transition } from '@/app/components/Transition';
 import dynamic from 'next/dynamic';
 import { Layout, Config, Data } from 'plotly.js';
 import { QuickDateButtons } from '@/app/components/QuickDateButtons';
+import { useLoadingState } from '@/app/hooks/useLoadingState';
+import { LoadingSteps } from '@/app/components/LoadingSteps';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -19,6 +21,7 @@ export default function SensitivityPage() {
   });
 
   const { data, loading, error, fetchData } = useNightscoutData();
+  const { isSearching, currentLoadingStep, motivationalPhrase, LOADING_STEPS } = useLoadingState(loading);
 
   const [selectedPeriod, setSelectedPeriod] = useState(3);
 
@@ -106,9 +109,16 @@ export default function SensitivityPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Análise de Sensibilidade</h2>
+    <div className="container mx-auto px-4 py-8">
+      <LoadingSteps
+        isSearching={isSearching}
+        currentLoadingStep={currentLoadingStep}
+        motivationalPhrase={motivationalPhrase}
+        loadingSteps={LOADING_STEPS}
+      />
+
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold mb-4">Análise de Sensibilidade à Insulina</h1>
         <QuickDateButtons 
           onSelect={handlePeriodSelect} 
           selectedDays={selectedPeriod} 
@@ -121,14 +131,6 @@ export default function SensitivityPage() {
           isLoading={loading}
         />
       </div>
-
-      {loading && (
-        <Transition>
-          <div className="flex justify-center">
-            <LoadingSpinner size="lg" message="Carregando dados..." />
-          </div>
-        </Transition>
-      )}
 
       {error && (
         <Transition>
@@ -215,4 +217,4 @@ export default function SensitivityPage() {
       )}
     </div>
   );
-} 
+}

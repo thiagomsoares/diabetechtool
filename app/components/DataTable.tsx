@@ -12,8 +12,9 @@ interface DataTableProps {
   data: NightscoutData['tableData'];
 }
 
-export const DataTable = ({ data }: DataTableProps) => {
+export const DataTable = ({ data = [] }: DataTableProps) => {
   const { settings } = useApp();
+  const timezone = settings?.timezone || 'UTC';
 
   const [sortConfig, setSortConfig] = useState<{
     key: keyof DataTableProps['data'][0];
@@ -24,25 +25,33 @@ export const DataTable = ({ data }: DataTableProps) => {
   const itemsPerPage = 10;
 
   const sortedData = React.useMemo(() => {
+    if (!Array.isArray(data)) return [];
     if (!sortConfig) return data;
 
     return [...data].sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
+      if (!a || !b) return 0;
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+      
+      if (aValue === undefined || bValue === undefined) return 0;
+      
+      if (aValue < bValue) {
         return sortConfig.direction === 'asc' ? -1 : 1;
       }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
+      if (aValue > bValue) {
         return sortConfig.direction === 'asc' ? 1 : -1;
       }
       return 0;
     });
   }, [data, sortConfig]);
 
-  const paginatedData = sortedData.slice(
+  const validData = Array.isArray(sortedData) ? sortedData : [];
+  const paginatedData = validData.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  const totalPages = Math.ceil(validData.length / itemsPerPage);
 
   const requestSort = (key: keyof DataTableProps['data'][0]) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -60,6 +69,14 @@ export const DataTable = ({ data }: DataTableProps) => {
       <ChevronUpIcon className="w-4 h-4 ml-1" /> : 
       <ChevronDownIcon className="w-4 h-4 ml-1" />;
   };
+
+  if (!Array.isArray(data) || data.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        Nenhum dado disponível
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -89,21 +106,19 @@ export const DataTable = ({ data }: DataTableProps) => {
             {paginatedData.map((row, index) => (
               <tr key={index} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {formatTimestampWithTimezone(row.timestamp, settings.timezone || 'UTC', 'dd/MM/yyyy HH:mm')}
+                  {formatTimestampWithTimezone(row.timestamp, timezone, 'dd/MM/yyyy HH:mm')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {row.bg} mg/dL
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {row.isfDynamic.toFixed(2)}
+                  {row.isfDynamic?.toFixed(2) || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {row.isfProfile.toFixed(2)}
+                  {row.isfProfile?.toFixed(2) || '-'}
                 </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm ${
-                  row.deviation > 0 ? 'text-red-600' : 'text-green-600'
-                }`}>
-                  {row.deviation.toFixed(2)}%
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {row.deviation?.toFixed(2) || '-'}%
                 </td>
               </tr>
             ))}
@@ -111,32 +126,27 @@ export const DataTable = ({ data }: DataTableProps) => {
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
-        <div className="flex justify-between w-full">
-          <div className="text-sm text-gray-700">
-            Mostrando <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> até{' '}
-            <span className="font-medium">{Math.min(currentPage * itemsPerPage, sortedData.length)}</span> de{' '}
-            <span className="font-medium">{sortedData.length}</span> resultados
-          </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            >
-              Anterior
-            </button>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            >
-              Próximo
-            </button>
-          </div>
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 border rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Anterior
+          </button>
+          <span className="text-sm text-gray-700">
+            Página {currentPage} de {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 border rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Próxima
+          </button>
         </div>
-      </div>
+      )}
     </div>
   );
-}; 
+};

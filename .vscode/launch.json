@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "bun",
+      "request": "launch",
+      "name": "Debug Bun",
+      "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+      "args": ["dev"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "development",
+        "PORT": "3000",
+        "BUN_DEBUG": "1"
+      },
+      "internalConsoleOptions": "openOnSessionStart",
+      "outputCapture": "std",
+      "console": "internalConsole",
+      "skipFiles": [
+        "<node_internals>/**",
+        "${workspaceFolder}/node_modules/**"
+      ]
+    },
+    {
+      "type": "bun",
+      "request": "attach",
+      "name": "Attach to Bun",
+      "port": 3002
+    }
+  ]
+}
